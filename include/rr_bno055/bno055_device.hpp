@@ -23,11 +23,29 @@
 #include <cstdint>
 
 /**
- * initialize()
+Lifecycle:
+
+initialize()
+deinitialize()
+reset()
+
+Configuration:
+
 setMode()
+setAxisRemap()
+
+Data Reading:
+
 readQuaternion()
+readAngularVelocity()
 readLinearAcceleration()
+readGravity()
+
+Status:
+
 getCalibrationStatus()
+isCalibrated()
+getSystemStatus()
  */
 
 namespace rr_imu_driver
