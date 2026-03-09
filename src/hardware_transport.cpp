@@ -88,6 +88,9 @@ int8_t HardwareTransport::bus_write_tmpl(uint8_t dev_addr, uint8_t reg_addr, uin
   return instance_->bus_write(dev_addr, reg_addr, data, len);
 }
 
+
+//TODO: These methods need to be moved to something that is returned by the factory,
+// and not done here. They are different for UART and for I2C
 int8_t HardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
 {
   (void)dev_addr;
@@ -134,9 +137,19 @@ int8_t HardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t*
   buf[0] = reg_addr;
   std::memcpy(&buf[1], data, len);
 
-  if (write(transport_, buf, len + 1) != len + 1)
+  struct i2c_msg msg;
+  msg.addr = config_address_;
+  msg.flags = 0;  // write
+  msg.len = len + 1;
+  msg.buf = buf;
+
+  struct i2c_rdwr_ioctl_data transfer;
+  transfer.msgs = &msg;
+  transfer.nmsgs = 1;
+
+  if (ioctl(transport_, I2C_RDWR, &transfer) < 0)
   {
-    return -1;  // BNO055_ERROR
+    return -1;
   }
-  return 0;  // BNO055_SUCCESS
+  return 0;
 }
