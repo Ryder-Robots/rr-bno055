@@ -21,6 +21,76 @@
 
 using namespace rr_bno055;
 
-void HardwareTransport::delay_msec(uint32_t msec) {
-     std::this_thread::sleep_for(std::chrono::milliseconds(msec));
+HardwareTransport::HardwareTransport()
+{
+  instance_ = this;
+  device_.bus_write = bus_write_tmpl;
+  device_.bus_read = bus_read_tmpl;
+  device_.bus_write = bus_write_tmpl;
+}
+
+void HardwareTransport::initialize(const TransportConfig transport_config)
+{
+  {
+    TransportFactory fact(transport_config);
+    transport_ = fact.get_transport();
+
+    if (transport_ == -1)
+    {
+      throw std::runtime_error("[HardwareTransport] could not create transport configuration error.");
+    }
+  }
+}
+
+void HardwareTransport::deinitialize()
+{
+  close(transport_);
+}
+
+void HardwareTransport::delay_msec(uint32_t msec)
+{
+  std::this_thread::sleep_for(std::chrono::milliseconds(msec));
+}
+
+int8_t HardwareTransport::bus_read_tmpl(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
+{
+  return instance_->bus_read(dev_addr, reg_addr, data, len);
+}
+
+int8_t HardwareTransport::bus_write_tmpl(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
+{
+  return instance_->bus_write(dev_addr, reg_addr, data, len);
+}
+
+int8_t HardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
+{
+  (void)dev_addr;
+  if (write(transport_, &reg_addr, 1) != 1)
+  {
+    return -1;
+  }
+
+  // Then read back len bytes into data buffer
+  if (read(transport_, data, len) != len)
+  {
+    return -1;
+  }
+
+  return 0;
+}
+
+int8_t HardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
+{
+  (void)dev_addr;
+
+  // Keep a constant here, 256 is the maximum uint8 can be and it is small enough just to allocate.
+  uint8_t buf[256];
+  buf[0] = reg_addr;
+  std::memcpy(&buf[1], data, len);
+
+  if (write(transport_, buf, len + 1) != len + 1)
+  {
+    return -1;  // BNO055_ERROR
+  }
+  return 0;  // BNO055_SUCCESS
 }

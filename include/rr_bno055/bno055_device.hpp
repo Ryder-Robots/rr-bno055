@@ -22,6 +22,14 @@
 
 #include <cstdint>
 
+/**
+ * initialize()
+setMode()
+readQuaternion()
+readLinearAcceleration()
+getCalibrationStatus()
+ */
+
 namespace rr_imu_driver
 {
 

@@ -24,31 +24,104 @@
 #include <thread>
 #include <cstdint>
 #include <string>
+#include "rr_bno055/transport_factory.hpp"
+#include <stdexcept>
 
 namespace rr_bno055
 {
+
+/**
+ * @brief Low-level I2C/UART transport adapter for the Bosch BNO055 IMU.
+ *
+ * Implements the bus read/write function pointers required by the Bosch
+ * BNO055 SensorAPI (`bno055_t::bus_read` / `bno055_t::bus_write`).
+ *
+ * A single instance is tracked via `instance_` so that the static template
+ * callbacks required by the C API can dispatch to the correct object.
+ *
+ * ## Hardware connection (I2C, default)
+ *
+ * | BNO055 pin | Raspberry Pi pin       | Notes                          |
+ * |------------|------------------------|--------------------------------|
+ * | VCC        | 3.3 V  (pin 1)         | Do **not** use 5 V             |
+ * | GND        | GND    (pin 6)         |                                |
+ * | SDA        | GPIO 2 / SDA (pin 3)   |                                |
+ * | SCL        | GPIO 3 / SCL (pin 5)   |                                |
+ * | PS0        | GND                    | Protocol select: PS1=0, PS0=0 → I2C |
+ * | PS1        | GND                    |                                |
+ * | ADR / COM3 | GND (addr 0x28)        | Pull high for addr 0x29        |
+ *
+ * The default transport opens `/dev/i2c-1` at address `0x28`.
+ * Enable I2C on the Pi with `sudo raspi-config` → Interface Options → I2C.
+ */
 class HardwareTransport
 {
 public:
-  HardwareTransport()
-  {
-  }
+  /**
+   * @brief Constructs the transport and wires up the Bosch SensorAPI callbacks.
+   *
+   * Sets the singleton `instance_` pointer and assigns `bus_read_tmpl` /
+   * `bus_write_tmpl` into `device_`.  Call `initialize()` before performing
+   * any I/O.
+   */
+  HardwareTransport();
 
   ~HardwareTransport() = default;
 
+  /**
+   * @brief Blocking delay used by the Bosch SensorAPI during sensor init.
+   * @param msec Duration in milliseconds.
+   */
   static void delay_msec(uint32_t msec);
 
+  /**
+   * @brief Opens the underlying transport (I2C or UART) described by @p config.
+   *
+   * Must be called before any bus_read / bus_write operations.
+   * Throws `std::runtime_error` if the transport cannot be opened.
+   *
+   * @param transport_config  Device path, type, and I2C address to use.
+   */
+  void initialize(const TransportConfig transport_config);
+
+  /**
+   * @brief Closes the transport file descriptor.
+   */
+  void deinitialize();
+
+  /**
+   * @brief Reads @p len bytes from register @p reg_addr into @p data.
+   *
+   * Performs a combined I2C write (register address) followed by a read.
+   * @p dev_addr is ignored because the address is embedded in the open fd.
+   *
+   * @return 0 on success, -1 on error.
+   */
   int8_t bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
 
+  /**
+   * @brief Writes @p len bytes from @p data to register @p reg_addr.
+   *
+   * Prepends the register address to the payload in a local 256-byte stack
+   * buffer (safe because `len` is `uint8_t`, max 255).
+   * @p dev_addr is ignored because the address is embedded in the open fd.
+   *
+   * @return 0 on success, -1 on error.
+   */
   int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
 
 protected:
+  /// Static trampoline into `instance_->bus_read()` for the Bosch C API.
   static int8_t bus_read_tmpl(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
 
+  /// Static trampoline into `instance_->bus_write()` for the Bosch C API.
   static int8_t bus_write_tmpl(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
 
 private:
-  int fd_;           // I2C file descriptor - needed by non-static methods
-  bno055_t device_;  // Bosch API struct holding function pointers
+  int transport_;       ///< Open file descriptor for the I2C or UART device.
+  bno055_t device_;     ///< Bosch SensorAPI struct holding function pointers.
+
+  static HardwareTransport* instance_;  ///< Singleton pointer set in constructor.
 };
-}  // namespace rr_imu_driver
+
+}  // namespace rr_bno055
