@@ -28,6 +28,7 @@
 #include <iostream>
 #include <termios.h>
 #include <cstring>
+#include <linux/i2c-dev.h>
 
 namespace rr_bno055
 {
@@ -64,7 +65,7 @@ struct TransportConfig
 class TransportFactory
 {
 public:
-  explicit TransportFactory(const TransportConfig config) : config_(config)
+  explicit TransportFactory(const TransportConfig& config) : config_(config)
   {
   }
   ~TransportFactory() = default;
@@ -75,14 +76,13 @@ public:
    */
   int get_transport();
 
-protected:
+private:
   /// Opens and configures an I2C file descriptor.
   int get_i2c_transport();
 
   /// Opens and configures a UART file descriptor.
   int get_uart_transport();
 
-private:
   TransportConfig config_;
 };
 

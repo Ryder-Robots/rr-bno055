@@ -26,6 +26,9 @@
 #include <string>
 #include "rr_bno055/transport_factory.hpp"
 #include <stdexcept>
+#include <atomic>
+#include <linux/i2c.h>
+#include <linux/i2c-dev.h>
 
 namespace rr_bno055
 {
@@ -53,6 +56,9 @@ namespace rr_bno055
  *
  * The default transport opens `/dev/i2c-1` at address `0x28`.
  * Enable I2C on the Pi with `sudo raspi-config` → Interface Options → I2C.
+ *
+ * Note that this class should only be called using hardware_transport,  it is not
+ * threadsafe.
  */
 class HardwareTransport
 {
@@ -66,7 +72,7 @@ public:
    */
   HardwareTransport();
 
-  ~HardwareTransport() = default;
+  ~HardwareTransport();
 
   /**
    * @brief Blocking delay used by the Bosch SensorAPI during sensor init.
@@ -82,7 +88,7 @@ public:
    *
    * @param transport_config  Device path, type, and I2C address to use.
    */
-  void initialize(const TransportConfig transport_config);
+  void initialize(const TransportConfig& transport_config);
 
   /**
    * @brief Closes the transport file descriptor.
@@ -110,18 +116,20 @@ public:
    */
   int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
 
-protected:
+private:
   /// Static trampoline into `instance_->bus_read()` for the Bosch C API.
   static int8_t bus_read_tmpl(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
 
   /// Static trampoline into `instance_->bus_write()` for the Bosch C API.
   static int8_t bus_write_tmpl(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
 
-private:
-  int transport_;       ///< Open file descriptor for the I2C or UART device.
-  bno055_t device_;     ///< Bosch SensorAPI struct holding function pointers.
+  std::atomic<bool> is_initialized_{ false };
+  int transport_;    ///< Open file descriptor for the I2C or UART device.
+  bno055_t device_;  ///< Bosch SensorAPI struct holding function pointers.
 
   inline static HardwareTransport* instance_ = nullptr;  ///< Singleton pointer set in constructor.
+
+  uint8_t config_address_;
 };
 
 }  // namespace rr_bno055
