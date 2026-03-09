@@ -120,6 +120,32 @@ install(FILES
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rr_bno055
 )
 
+# ─── Unit tests (GTest) ──────────────────────────────────────────────────────
+include(CTest)
+enable_testing()
+
+find_package(GTest REQUIRED)
+
+add_executable(rr_bno055_tests
+  test/test_transport_config.cpp
+  test/test_transport_factory.cpp
+  test/test_hardware_transport.cpp
+)
+
+target_link_libraries(rr_bno055_tests
+  rr_bno055
+  GTest::GTest
+  GTest::Main
+)
+
+target_compile_options(rr_bno055_tests PRIVATE
+  -Wall
+  -Wextra
+  -Wpedantic
+)
+
+add_test(NAME rr_bno055_tests COMMAND rr_bno055_tests)
+
 # ─── Debian package (CPack) ──────────────────────────────────────────────────
 set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_NAME "rr-bno055")

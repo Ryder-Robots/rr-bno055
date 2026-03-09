@@ -121,7 +121,7 @@ private:
   int transport_;       ///< Open file descriptor for the I2C or UART device.
   bno055_t device_;     ///< Bosch SensorAPI struct holding function pointers.
 
-  static HardwareTransport* instance_;  ///< Singleton pointer set in constructor.
+  inline static HardwareTransport* instance_ = nullptr;  ///< Singleton pointer set in constructor.
 };
 
 }  // namespace rr_bno055
