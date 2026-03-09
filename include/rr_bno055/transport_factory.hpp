@@ -41,12 +41,19 @@ struct TransportConfig
 class TransportFactory
 {
 public:
+  TransportFactory()
+  {
+  }
+  ~TransportFactory() = default;
   static int get_transport();
 
-private:
+protected:
   static int get_i2c_transport();
 
   static int get_uart_transport();
+
+private:
+  TransportConfig config_;
 };
 
 }  // namespace rr_bno055
