@@ -48,6 +48,7 @@ set(BNO055_API_DIR ${bno055_sensorapi_SOURCE_DIR})
 add_library(rr_bno055
   src/bno055_device.cpp
   src/hardware_transport.cpp
+  src/transport_factory.cpp
   ${BNO055_API_DIR}/bno055.c        # vendored Bosch C source
 )
 

@@ -22,16 +22,28 @@
 
 #include <string>
 #include <cstdint>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <iostream>
+#include <termios.h>
+#include <cstring>
 
 namespace rr_bno055
 {
+
+enum TransportType {
+  I2C,
+  UART,
+};
+
 /**
  * The following defaults should be pretty sensible for most cases.
  * Assumes I2C interface.
  */
 struct TransportConfig
 {
-  std::string type = "i2c";
+  TransportType type = I2C;
   std::string device = "/dev/i2c-1";
 
   // To change thge address to 0x29 Address pin must be wired and set high.
@@ -41,16 +53,16 @@ struct TransportConfig
 class TransportFactory
 {
 public:
-  TransportFactory()
+  TransportFactory(const TransportConfig config) : config_(config)
   {
   }
   ~TransportFactory() = default;
-  static int get_transport();
+  int get_transport();
 
 protected:
-  static int get_i2c_transport();
+  int get_i2c_transport();
 
-  static int get_uart_transport();
+  int get_uart_transport();
 
 private:
   TransportConfig config_;
