@@ -70,10 +70,117 @@ int UARTHardwareTransport::initialize_trans(const TransportConfig& transport_con
   return fd;
 }
 
+// read may not return exactly len bytes,  this will usually mean it will
+// need more than one pass, read_exact attempts exactly len bytes.
+ssize_t UARTHardwareTransport::read_exact(int fd, uint8_t* buf, size_t len)
+{
+  ssize_t bytes_read_total = 0;
+  while (len - bytes_read_total > 0)
+  {
+    ssize_t bytes_read = read(fd, buf, len);
+    if (bytes_read == -1)
+    {
+      return -1;
+    }
+
+    // EOF / device closed
+    if (bytes_read == 0)
+    {
+      errno = EIO;
+      return -1;
+    }
+
+    bytes_read_total += bytes_read;
+  }
+  return bytes_read_total;
+}
+
 int8_t UARTHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
 {
+  (void)dev_addr;
+  if (!is_initialized_.load(std::memory_order_acquire))
+  {
+    std::cerr << "[TransportFactory] serial communication is not initialised";
+    return -1;
+  }
+  if (transport_ == -1)
+  {
+    std::cerr << "[TransportFactory] no IO to serial port";
+    return -1;
+  }
+
+  uint8_t packet[] = { UART_START_BYTE, UART_READ, reg_addr, len };
+  if (write(transport_, packet, 4) == -1)
+  {
+    std::cerr << "[TransportFactory] unable to read read from IMU: " << strerror(errno) << std::endl;
+    return -1;
+  }
+
+  uint8_t header[2];
+  if (read_exact(transport_, header, 2) == -1)
+  {
+    std::cerr << "[TransportFactory] could not read serial header: " << strerror(errno) << std::endl;
+    return -1;
+  }
+
+  if (header[0] != UART_RESP_READ)
+  {
+    std::cerr << "[TransportFactory] invalid header recieved" << std::endl;
+    return -1;
+  }
+
+  if (read_exact(transport_, data, header[1]) == -1)
+  {
+    std::cerr << "[TransportFactory] could not read serial data: " << strerror(errno) << std::endl;
+    return -1;
+  }
+  return 0;
 }
 
 int8_t UARTHardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
 {
+  (void)dev_addr;
+
+  if (!is_initialized_.load(std::memory_order_acquire))
+  {
+    std::cerr << "[TransportFactory] serial communication is not initialised";
+    return -1;
+  }
+
+  if (transport_ == -1)
+  {
+    std::cerr << "[TransportFactory] no IO to serial port";
+    return -1;
+  }
+  std::vector<uint8_t> packet;
+  packet.reserve(4 + len);
+
+  packet.push_back(UART_START_BYTE);
+  packet.push_back(UART_WRITE);
+  packet.push_back(reg_addr);
+  packet.push_back(len);
+  packet.insert(packet.end(), data, data + len);
+  if (write(transport_, packet.data(), packet.size()) == -1)
+  {
+    std::cerr << "[TransportFactory] serial write error: " << strerror(errno) << std::endl;
+    return -1;
+  }
+
+  uint8_t ack[2];
+  if (read_exact(transport_, ack, 2) < 0)
+  {
+    std::cerr << "[TransportFactory] serial read ACK error: " << strerror(errno) << std::endl;
+    return -1;
+  }
+  if (ack[0] != UART_RESP_WRITE)
+  {
+    std::cerr << "[TransportFactory] unexpected ACK header: " << std::hex << (int)ack[0] << std::endl;
+    return -1;
+  }
+  if (ack[1] != 0x01)
+  {
+    std::cerr << "[TransportFactory] write failed, status: " << std::hex << (int)ack[1] << std::endl;
+    return -1;
+  }
+  return 0;
 }

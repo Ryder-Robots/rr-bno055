@@ -24,6 +24,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
+#include <vector>
+#include "bno055.h"
 #include "rr_bno055/hardware_transport.hpp"
 
 namespace rr_bno055
@@ -36,5 +38,14 @@ public:
   int8_t bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) override;
 
   int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) override;
+
+  static constexpr uint8_t UART_START_BYTE = 0xAA;
+  static constexpr uint8_t UART_WRITE = 0x00;
+  static constexpr uint8_t UART_READ = 0x01;
+  static constexpr uint8_t UART_RESP_WRITE = 0xEE;
+  static constexpr uint8_t UART_RESP_READ = 0xBB;
+
+private:
+  ssize_t read_exact(int fd, uint8_t* buf, size_t len);
 };
 }  // namespace rr_bno055
