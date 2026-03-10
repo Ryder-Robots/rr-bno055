@@ -21,7 +21,7 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include <stdexcept>
-#include "rr_bno055/hardware_transport.hpp"
+#include "rr_bno055/i2c_hardware_transport.hpp"
 
 using namespace rr_bno055;
 
@@ -29,7 +29,7 @@ using namespace rr_bno055;
 
 TEST(HardwareTransportTest, ConstructsWithoutThrowing)
 {
-  EXPECT_NO_THROW(HardwareTransport transport);
+  EXPECT_NO_THROW(I2CHardwareTransport transport);
 }
 
 // ── delay_msec ───────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ TEST(HardwareTransportTest, DelayMsecTakesAtLeastRequestedTime)
 
 TEST(HardwareTransportTest, InitializeThrowsOnBadDevice)
 {
-  HardwareTransport transport;
+  I2CHardwareTransport transport;
 
   TransportConfig cfg;
   cfg.device  = "/dev/nonexistent-i2c";
@@ -66,7 +66,7 @@ TEST(HardwareTransportTest, InitializeThrowsOnBadDevice)
 
 TEST(HardwareTransportTest, InitializeThrowsOnInvalidAddress)
 {
-  HardwareTransport transport;
+  I2CHardwareTransport transport;
 
   TransportConfig cfg;
   cfg.device  = "/dev/i2c-1";

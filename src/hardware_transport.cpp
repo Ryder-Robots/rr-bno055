@@ -42,15 +42,18 @@ void HardwareTransport::initialize(const TransportConfig& transport_config)
     throw std::runtime_error("[HardwareTransport] already configured");
   }
 
-  TransportFactory fact(transport_config);
-  transport_ = fact.get_transport();
+  transport_ = initialize_trans(transport_config);
 
   if (transport_ == -1)
   {
     throw std::runtime_error("[HardwareTransport] could not create transport configuration error.");
   }
   instance_ = this;
-  config_address_ = transport_config.address;
+
+  device_.bus_write = bus_write_tmpl;
+  device_.bus_read = bus_read_tmpl;
+  device_.delay_msec = delay_msec;
+
   is_initialized_.store(true, std::memory_order_release);
 }
 
@@ -86,70 +89,4 @@ int8_t HardwareTransport::bus_write_tmpl(uint8_t dev_addr, uint8_t reg_addr, uin
     return -1;
   }
   return instance_->bus_write(dev_addr, reg_addr, data, len);
-}
-
-
-//TODO: These methods need to be moved to something that is returned by the factory,
-// and not done here. They are different for UART and for I2C
-int8_t HardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
-{
-  (void)dev_addr;
-
-  if (!is_initialized_.load(std::memory_order_acquire))
-  {
-    return -1;
-  }
-
-  struct i2c_msg msgs[2];
-
-  msgs[0].addr = config_address_;  // stored I2C address
-  msgs[0].flags = 0;               // write
-  msgs[0].len = 1;
-  msgs[0].buf = &reg_addr;
-
-  // Message 2: read the response (repeated START, not a new START)
-  msgs[1].addr = config_address_;
-  msgs[1].flags = I2C_M_RD;  // read
-  msgs[1].len = len;
-  msgs[1].buf = data;
-
-  struct i2c_rdwr_ioctl_data transfer;
-  transfer.msgs = msgs;
-  transfer.nmsgs = 2;
-  if (ioctl(transport_, I2C_RDWR, &transfer) < 0)
-  {
-    return -1;
-  }
-  return 0;
-}
-
-int8_t HardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
-{
-  (void)dev_addr;
-
-  if (!is_initialized_.load(std::memory_order_acquire))
-  {
-    return -1;
-  }
-
-  // Keep a constant here, 256 is the maximum uint8 can be and it is small enough just to allocate.
-  uint8_t buf[256];
-  buf[0] = reg_addr;
-  std::memcpy(&buf[1], data, len);
-
-  struct i2c_msg msg;
-  msg.addr = config_address_;
-  msg.flags = 0;  // write
-  msg.len = len + 1;
-  msg.buf = buf;
-
-  struct i2c_rdwr_ioctl_data transfer;
-  transfer.msgs = &msg;
-  transfer.nmsgs = 1;
-
-  if (ioctl(transport_, I2C_RDWR, &transfer) < 0)
-  {
-    return -1;
-  }
-  return 0;
 }

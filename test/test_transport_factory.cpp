@@ -19,100 +19,96 @@
 // SOFTWARE.
 
 #include <gtest/gtest.h>
+#include <stdexcept>
 #include "rr_bno055/transport_factory.hpp"
 
 using namespace rr_bno055;
 
 // ── I2C ──────────────────────────────────────────────────────────────────────
 
-TEST(TransportFactoryI2CTest, InvalidAddressReturnsError)
+TEST(TransportFactoryI2CTest, InvalidAddressThrows)
 {
-  // Address 0x30 is not a valid BNO055 address — must fail before open().
+  // Address 0x30 is not a valid BNO055 address — initialize_trans returns -1,
+  // so create_transport must throw.
   TransportConfig cfg;
   cfg.address = 0x30;
 
-  TransportFactory factory(cfg);
-  EXPECT_EQ(factory.get_transport(), -1);
+  TransportFactory factory;
+  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
 }
 
-TEST(TransportFactoryI2CTest, Address0x28IsAccepted)
+TEST(TransportFactoryI2CTest, Address0x28WithBadDeviceThrows)
 {
-  // 0x28 is valid; open() will fail because /dev/nonexistent doesn't exist,
-  // but the address check must pass (return != validation -1).
-  // We just verify it doesn't crash and returns something (likely -1 from open).
+  // 0x28 passes address validation; open() fails on the nonexistent device,
+  // so create_transport must still throw.
   TransportConfig cfg;
   cfg.address = 0x28;
   cfg.device  = "/dev/nonexistent-i2c";
 
-  TransportFactory factory(cfg);
-  // Result is -1 (open fails), but NOT from address validation.
-  // There is no way to distinguish here without refactoring — so we only
-  // assert the call does not throw and returns -1.
-  EXPECT_EQ(factory.get_transport(), -1);
+  TransportFactory factory;
+  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
 }
 
-TEST(TransportFactoryI2CTest, Address0x29IsAccepted)
+TEST(TransportFactoryI2CTest, Address0x29WithBadDeviceThrows)
 {
   TransportConfig cfg;
   cfg.address = 0x29;
   cfg.device  = "/dev/nonexistent-i2c";
 
-  TransportFactory factory(cfg);
-  EXPECT_EQ(factory.get_transport(), -1);
+  TransportFactory factory;
+  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
 }
 
-TEST(TransportFactoryI2CTest, AddressBelowRangeReturnsError)
+TEST(TransportFactoryI2CTest, AddressBelowRangeThrows)
 {
   TransportConfig cfg;
   cfg.address = 0x00;
 
-  TransportFactory factory(cfg);
-  EXPECT_EQ(factory.get_transport(), -1);
+  TransportFactory factory;
+  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
 }
 
-TEST(TransportFactoryI2CTest, AddressAboveRangeReturnsError)
+TEST(TransportFactoryI2CTest, AddressAboveRangeThrows)
 {
   TransportConfig cfg;
   cfg.address = 0xFF;
 
-  TransportFactory factory(cfg);
-  EXPECT_EQ(factory.get_transport(), -1);
+  TransportFactory factory;
+  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
 }
 
 // ── UART ─────────────────────────────────────────────────────────────────────
 
-TEST(TransportFactoryUARTTest, NonexistentDeviceReturnsError)
+TEST(TransportFactoryUARTTest, NonexistentDeviceThrows)
 {
   TransportConfig cfg;
   cfg.type   = UART;
   cfg.device = "/dev/nonexistent-uart";
 
-  TransportFactory factory(cfg);
-  EXPECT_EQ(factory.get_transport(), -1);
+  TransportFactory factory;
+  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
 }
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
 
 TEST(TransportFactoryDispatchTest, I2CTypeCallsI2CPath)
 {
-  // With an invalid address the I2C guard triggers immediately.
-  // This confirms the I2C code path is reached (not UART).
+  // Invalid address triggers the I2C address guard, confirming the I2C path.
   TransportConfig cfg;
   cfg.type    = I2C;
   cfg.address = 0x01;  // invalid
 
-  TransportFactory factory(cfg);
-  EXPECT_EQ(factory.get_transport(), -1);
+  TransportFactory factory;
+  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
 }
 
 TEST(TransportFactoryDispatchTest, UARTTypeCallsUARTPath)
 {
-  // With a nonexistent device the UART open() call fails.
-  // This confirms the UART code path is reached (not I2C).
+  // Nonexistent device causes open() to fail, confirming the UART path.
   TransportConfig cfg;
   cfg.type   = UART;
   cfg.device = "/dev/nonexistent-uart";
 
-  TransportFactory factory(cfg);
-  EXPECT_EQ(factory.get_transport(), -1);
+  TransportFactory factory;
+  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
 }

@@ -24,14 +24,38 @@
 #include <thread>
 #include <cstdint>
 #include <string>
-#include "rr_bno055/transport_factory.hpp"
 #include <stdexcept>
 #include <atomic>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <cstring>
+#include <unistd.h>
 
 namespace rr_bno055
 {
+
+/// Selects the physical interface used to communicate with the BNO055.
+enum TransportType
+{
+  I2C,   ///< I2C bus (PS1=0, PS0=0 on BNO055)
+  UART,  ///< UART / serial (PS1=0, PS0=1 on BNO055)
+};
+
+/**
+ * @brief Configuration passed to `TransportFactory` and `HardwareTransport::initialize()`.
+ *
+ * Defaults are suitable for a BNO055 breakout wired to the Raspberry Pi
+ * primary I2C bus with the address pin (ADR/COM3) pulled low.
+ */
+struct TransportConfig
+{
+  TransportType type = I2C;           ///< Interface type.
+  std::string device = "/dev/i2c-1";  ///< Device node to open.
+
+  /// I2C address of the BNO055.  Pull ADR/COM3 high to use 0x29 instead.
+  uint8_t address = 0x28;
+};
 
 /**
  * @brief Low-level I2C/UART transport adapter for the Bosch BNO055 IMU.
@@ -80,6 +104,8 @@ public:
    */
   static void delay_msec(uint32_t msec);
 
+  void initialize(const TransportConfig& transport_config);
+
   /**
    * @brief Opens the underlying transport (I2C or UART) described by @p config.
    *
@@ -88,12 +114,15 @@ public:
    *
    * @param transport_config  Device path, type, and I2C address to use.
    */
-  void initialize(const TransportConfig& transport_config);
+  virtual int initialize_trans(const TransportConfig& transport_config) = 0;
 
   /**
    * @brief Closes the transport file descriptor.
+   * 
+   * Override this method, if further deinitialization is required, however it MUST
+   * close transport_, and MUST set is_initialized_ to false.
    */
-  void deinitialize();
+  virtual void deinitialize();
 
   /**
    * @brief Reads @p len bytes from register @p reg_addr into @p data.
@@ -103,7 +132,7 @@ public:
    *
    * @return 0 on success, -1 on error.
    */
-  int8_t bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
+  virtual int8_t bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) = 0;
 
   /**
    * @brief Writes @p len bytes from @p data to register @p reg_addr.
@@ -114,7 +143,12 @@ public:
    *
    * @return 0 on success, -1 on error.
    */
-  int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
+  virtual int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) = 0;
+
+protected:
+  std::atomic<bool> is_initialized_{ false };
+
+  int transport_;  ///< Open file descriptor for the I2C or UART device.
 
 private:
   /// Static trampoline into `instance_->bus_read()` for the Bosch C API.
@@ -123,13 +157,10 @@ private:
   /// Static trampoline into `instance_->bus_write()` for the Bosch C API.
   static int8_t bus_write_tmpl(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
 
-  std::atomic<bool> is_initialized_{ false };
-  int transport_;    ///< Open file descriptor for the I2C or UART device.
   bno055_t device_;  ///< Bosch SensorAPI struct holding function pointers.
 
   inline static HardwareTransport* instance_ = nullptr;  ///< Singleton pointer set in constructor.
 
-  uint8_t config_address_;
 };
 
 }  // namespace rr_bno055

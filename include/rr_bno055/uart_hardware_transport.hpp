@@ -18,24 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "rr_bno055/transport_factory.hpp"
+#pragma once
 
-using namespace rr_bno055;
+#include <iostream>
+#include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
+#include "rr_bno055/hardware_transport.hpp"
 
- std::unique_ptr<HardwareTransport> TransportFactory::create_transport(const TransportConfig& config)
+namespace rr_bno055
 {
-  std::unique_ptr<HardwareTransport> hw;
-  switch (config.type)
-  {
-    case I2C:
-      hw = std::make_unique<I2CHardwareTransport>();
-      hw->initialize(config);
-      return hw;
-    case UART:
-      hw = std::make_unique<UARTHardwareTransport>();
-      hw->initialize(config);
-      return hw;
-    default:
-      throw std::runtime_error("[TransportFactory] non supported transport");
-  }
-}
+class UARTHardwareTransport : public HardwareTransport
+{
+public:
+  int initialize_trans(const TransportConfig& transport_config) override;
+
+  int8_t bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) override;
+
+  int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) override;
+};
+}  // namespace rr_bno055
