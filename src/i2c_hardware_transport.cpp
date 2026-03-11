@@ -26,7 +26,7 @@ int I2CHardwareTransport::initialize_trans(const TransportConfig& transport_conf
 {
   if (transport_config.device.empty() || !(transport_config.address == 0x28 || transport_config.address == 0x29))
   {
-    std::cerr << "[TransportFactory] Failed to open device: no device defined or address not one of 28 or 29";
+    std::cerr << "[I2CHardwareTransport] Failed to open device: no device defined or address not one of 28 or 29";
     return -1;
   }
 
@@ -35,14 +35,14 @@ int I2CHardwareTransport::initialize_trans(const TransportConfig& transport_conf
   {
     if (ioctl(transport, I2C_SLAVE, transport_config.address))
     {
-      std::cerr << "[TransportFactory] unable to create I2C slave: " << strerror(errno);
+      std::cerr << "[I2CHardwareTransport] unable to create I2C slave: " << strerror(errno);
       close(transport);
       return -1;
     }
   }
   else
   {
-    std::cerr << "[TransportFactory] could not open device, verify that device string is correct: " << strerror(errno);
+    std::cerr << "[I2CHardwareTransport] could not open device, verify that device string is correct: " << strerror(errno);
     return -1;
   }
 
@@ -90,7 +90,7 @@ int8_t I2CHardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8
     return -1;
   }
 
-  // Keep a constant here, 256 is the maximum uint8 can be and it is small enough just to allocate.
+  // 1 byte register address + up to 255 bytes data (uint8_t max) = 256 bytes total.
   uint8_t buf[256];
   buf[0] = reg_addr;
   std::memcpy(&buf[1], data, len);

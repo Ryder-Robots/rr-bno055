@@ -46,21 +46,16 @@ void HardwareTransport::initialize(const TransportConfig& transport_config)
 
   if (transport_ == -1)
   {
-    throw std::runtime_error("[HardwareTransport] could not create transport configuration error.");
+    throw std::runtime_error("[HardwareTransport] could not open transport.");
   }
   instance_ = this;
-
-  device_.bus_write = bus_write_tmpl;
-  device_.bus_read = bus_read_tmpl;
-  device_.delay_msec = delay_msec;
-
-  if (bno055_init(&device_) != 0) 
+  if (bno055_init(&device_) != 0)
   {
     instance_ = nullptr;
-    throw std::runtime_error("[HardwareTransport] could not initlize IMU");
+    throw std::runtime_error("[HardwareTransport] could not initialize IMU");
   }
 
-  //set power mode to normal.
+  // set power mode to normal.
   if (bno055_set_power_mode(BNO055_POWER_MODE_NORMAL) != 0)
   {
     instance_ = nullptr;
@@ -74,15 +69,17 @@ void HardwareTransport::deinitialize()
 {
   if (transport_ != -1)
   {
+    if (is_initialized_.load(std::memory_order_acquire))
+    {
+      // Attempt to set low power mode; continue deinitialization even if this fails.
+      if (bno055_set_power_mode(BNO055_POWER_MODE_LOWPOWER) != 0)
+      {
+        std::cerr << "[HardwareTransport] unable to set device to low power mode" << std::endl;
+      }
+    }
     close(transport_);
   }
   transport_ = -1;
-  
-  // attempt to set low power mode, follow through with deinitilization, but warn the user.
-  if (bno055_set_power_mode(BNO055_POWER_MODE_LOWPOWER) != 0)
-  {
-    std::cerr << "[HardwareTransport] unable to set device to low power mode" << std::endl;
-  }
 
   instance_ = nullptr;
   is_initialized_.store(false, std::memory_order_release);

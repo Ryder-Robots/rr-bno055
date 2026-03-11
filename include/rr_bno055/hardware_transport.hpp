@@ -80,18 +80,25 @@ struct TransportConfig
  * The default transport opens `/dev/i2c-1` at address `0x28`.
  * Enable I2C on the Pi with `sudo raspi-config` → Interface Options → I2C.
  *
- * Note that this class should only be called using hardware_transport,  it is not
- * threadsafe.
+ * Only one instance may exist at a time.  Copy and move are deleted to enforce this
+ * constraint.  The class is not thread-safe.
  */
 class HardwareTransport
 {
 public:
+
+  // Force singleton.
+  HardwareTransport(const HardwareTransport&) = delete;
+  HardwareTransport& operator=(const HardwareTransport&) = delete;
+  HardwareTransport(HardwareTransport&&) = delete;
+  HardwareTransport& operator=(HardwareTransport&&) = delete;
+
   /**
    * @brief Constructs the transport and wires up the Bosch SensorAPI callbacks.
    *
-   * Sets the singleton `instance_` pointer and assigns `bus_read_tmpl` /
-   * `bus_write_tmpl` into `device_`.  Call `initialize()` before performing
-   * any I/O.
+   * Assigns `bus_read_tmpl` / `bus_write_tmpl` into `device_` so that the
+   * Bosch SensorAPI can dispatch reads and writes through this object.
+   * Call `initialize()` before performing any I/O.
    */
   HardwareTransport();
 
@@ -103,6 +110,16 @@ public:
    */
   static void delay_msec(uint32_t msec);
 
+  /**
+   * @brief Opens the transport, initialises the Bosch SensorAPI, and sets the
+   * device to normal power mode.
+   *
+   * Calls `initialize_trans()` to open the physical bus, then `bno055_init()`
+   * and `bno055_set_power_mode()`.  Throws `std::runtime_error` on any failure.
+   * Must be called exactly once before any I/O.
+   *
+   * @param transport_config  Device path, type, and I2C address to use.
+   */
   void initialize(const TransportConfig& transport_config);
 
   /**
@@ -116,18 +133,18 @@ public:
   virtual int initialize_trans(const TransportConfig& transport_config) = 0;
 
   /**
-   * @brief Closes the transport file descriptor.
-   * 
-   * Override this method, if further deinitialization is required, however it MUST
-   * close transport_, and MUST set is_initialized_ to false.
+   * @brief Sets the device to low-power mode and closes the transport file descriptor.
+   *
+   * Subclasses that need additional teardown should override this method and
+   * call `HardwareTransport::deinitialize()` at the end of their override.
    */
   virtual void deinitialize();
 
   /**
    * @brief Reads @p len bytes from register @p reg_addr into @p data.
    *
-   * Performs a combined I2C write (register address) followed by a read.
-   * @p dev_addr is ignored because the address is embedded in the open fd.
+   * @p dev_addr is the Bosch SensorAPI device address; implementations may
+   * ignore it if the address is already embedded in the open file descriptor.
    *
    * @return 0 on success, -1 on error.
    */
@@ -136,17 +153,19 @@ public:
   /**
    * @brief Writes @p len bytes from @p data to register @p reg_addr.
    *
-   * Prepends the register address to the payload in a local 256-byte stack
-   * buffer (safe because `len` is `uint8_t`, max 255).
-   * @p dev_addr is ignored because the address is embedded in the open fd.
+   * @p dev_addr is the Bosch SensorAPI device address; implementations may
+   * ignore it if the address is already embedded in the open file descriptor.
    *
    * @return 0 on success, -1 on error.
    */
   virtual int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) = 0;
 
   /**
-   * Return device object so that it can be initlized by the device driver. For example:
-   * 
+   * @brief Returns a copy of the Bosch SensorAPI device struct.
+   *
+   * The returned struct contains the function pointers wired to this transport
+   * and can be passed to higher-level Bosch API calls (e.g. reading sensor data).
+   * Only valid after `initialize()` has succeeded.
    */
   bno055_t get_device();
 
@@ -165,7 +184,6 @@ private:
   bno055_t device_;  ///< Bosch SensorAPI struct holding function pointers.
 
   inline static HardwareTransport* instance_ = nullptr;  ///< Singleton pointer set in constructor.
-
 };
 
 }  // namespace rr_bno055
