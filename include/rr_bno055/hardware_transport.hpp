@@ -20,15 +20,14 @@
 
 #pragma once
 
+extern "C" {
 #include "bno055.h"
+}
 #include <thread>
-#include <cstdint>
 #include <string>
 #include <stdexcept>
+#include <iostream>
 #include <atomic>
-#include <linux/i2c.h>
-#include <linux/i2c-dev.h>
-#include <sys/ioctl.h>
 #include <cstring>
 #include <unistd.h>
 
@@ -96,7 +95,7 @@ public:
    */
   HardwareTransport();
 
-  ~HardwareTransport();
+  virtual ~HardwareTransport();
 
   /**
    * @brief Blocking delay used by the Bosch SensorAPI during sensor init.
@@ -144,6 +143,12 @@ public:
    * @return 0 on success, -1 on error.
    */
   virtual int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) = 0;
+
+  /**
+   * Return device object so that it can be initlized by the device driver. For example:
+   * 
+   */
+  bno055_t get_device();
 
 protected:
   std::atomic<bool> is_initialized_{ false };

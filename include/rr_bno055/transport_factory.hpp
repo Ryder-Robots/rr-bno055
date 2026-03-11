@@ -44,7 +44,7 @@ public:
 
   /**
    * @brief Opens the transport described by the stored config.
-   * @return A valid file descriptor on success, or -1 on failure.
+   * @return Returns unique pointer to Hardware Transport.
    */
   std::unique_ptr<HardwareTransport> create_transport(const TransportConfig& config);
 };

@@ -54,6 +54,19 @@ void HardwareTransport::initialize(const TransportConfig& transport_config)
   device_.bus_read = bus_read_tmpl;
   device_.delay_msec = delay_msec;
 
+  if (bno055_init(&device_) != 0) 
+  {
+    instance_ = nullptr;
+    throw std::runtime_error("[HardwareTransport] could not initlize IMU");
+  }
+
+  //set power mode to normal.
+  if (bno055_set_power_mode(BNO055_POWER_MODE_NORMAL) != 0)
+  {
+    instance_ = nullptr;
+    throw std::runtime_error("[HardwareTransport] could not set power mode");
+  }
+
   is_initialized_.store(true, std::memory_order_release);
 }
 
@@ -64,6 +77,13 @@ void HardwareTransport::deinitialize()
     close(transport_);
   }
   transport_ = -1;
+  
+  // attempt to set low power mode, follow through with deinitilization, but warn the user.
+  if (bno055_set_power_mode(BNO055_POWER_MODE_LOWPOWER) != 0)
+  {
+    std::cerr << "[HardwareTransport] unable to set device to low power mode" << std::endl;
+  }
+
   instance_ = nullptr;
   is_initialized_.store(false, std::memory_order_release);
 }
@@ -89,4 +109,9 @@ int8_t HardwareTransport::bus_write_tmpl(uint8_t dev_addr, uint8_t reg_addr, uin
     return -1;
   }
   return instance_->bus_write(dev_addr, reg_addr, data, len);
+}
+
+bno055_t HardwareTransport::get_device()
+{
+  return device_;
 }

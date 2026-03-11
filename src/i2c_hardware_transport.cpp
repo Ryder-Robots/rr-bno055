@@ -43,6 +43,7 @@ int I2CHardwareTransport::initialize_trans(const TransportConfig& transport_conf
   else
   {
     std::cerr << "[TransportFactory] could not open device, verify that device string is correct: " << strerror(errno);
+    return -1;
   }
 
   config_address_ = transport_config.address;
@@ -51,6 +52,7 @@ int I2CHardwareTransport::initialize_trans(const TransportConfig& transport_conf
 
 int8_t I2CHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
 {
+  (void)dev_addr;
   if (!is_initialized_.load(std::memory_order_acquire))
   {
     return -1;
@@ -58,13 +60,13 @@ int8_t I2CHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_
 
   struct i2c_msg msgs[2];
 
-  msgs[0].addr = dev_addr;
+  msgs[0].addr = config_address_;
   msgs[0].flags = 0;  // write
   msgs[0].len = 1;
   msgs[0].buf = &reg_addr;
 
   // Message 2: read the response (repeated START, not a new START)
-  msgs[1].addr = dev_addr;
+  msgs[1].addr = config_address_;
   msgs[1].flags = I2C_M_RD;  // read
   msgs[1].len = len;
   msgs[1].buf = data;

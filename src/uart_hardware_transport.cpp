@@ -74,25 +74,60 @@ int UARTHardwareTransport::initialize_trans(const TransportConfig& transport_con
 // need more than one pass, read_exact attempts exactly len bytes.
 ssize_t UARTHardwareTransport::read_exact(int fd, uint8_t* buf, size_t len)
 {
-  ssize_t bytes_read_total = 0;
+  size_t bytes_read_total = 0;
   while (len - bytes_read_total > 0)
   {
-    ssize_t bytes_read = read(fd, buf, len);
+    ssize_t bytes_read = read(fd, buf, len - bytes_read_total);
     if (bytes_read == -1)
     {
+      // Retry on signal interrupt
+      if (errno == EINTR)
+      {
+        continue;
+      }
       return -1;
     }
 
     // EOF / device closed
-    if (bytes_read == 0)
+    else if (bytes_read == 0)
     {
       errno = EIO;
       return -1;
     }
 
     bytes_read_total += bytes_read;
+    buf += bytes_read;
   }
-  return bytes_read_total;
+  return static_cast<ssize_t>(bytes_read_total);
+}
+
+ssize_t UARTHardwareTransport::write_all(int fildes, const void* buf, size_t nbyte)
+{
+  const uint8_t* b = static_cast<const uint8_t*>(buf);
+  size_t remainder = nbyte;
+  size_t total_written = 0;
+  while (remainder > 0)
+  {
+    ssize_t written = write(fildes, b, remainder);
+    if (written == -1)
+    {
+      // Retry on signal interrupt
+      if (errno == EINTR)
+      {
+        continue;
+      }
+      return written;
+    }
+    else if (written == 0)
+    {
+      errno = EIO;
+      return -1;
+    }
+    b += written;
+    remainder -= written;
+    total_written += written;
+  }
+ return static_cast<ssize_t>(total_written);
 }
 
 int8_t UARTHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
@@ -110,7 +145,7 @@ int8_t UARTHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8
   }
 
   uint8_t packet[] = { UART_START_BYTE, UART_READ, reg_addr, len };
-  if (write(transport_, packet, 4) == -1)
+  if (write_all(transport_, packet, 4) == -1)
   {
     std::cerr << "[TransportFactory] unable to read read from IMU: " << strerror(errno) << std::endl;
     return -1;
@@ -160,7 +195,7 @@ int8_t UARTHardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint
   packet.push_back(reg_addr);
   packet.push_back(len);
   packet.insert(packet.end(), data, data + len);
-  if (write(transport_, packet.data(), packet.size()) == -1)
+  if (write_all(transport_, packet.data(), packet.size()) == -1)
   {
     std::cerr << "[TransportFactory] serial write error: " << strerror(errno) << std::endl;
     return -1;

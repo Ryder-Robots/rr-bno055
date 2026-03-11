@@ -24,6 +24,10 @@
 #include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
+#include <linux/i2c.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <cstring>
 
 namespace rr_bno055
 {

@@ -47,5 +47,6 @@ public:
 
 private:
   ssize_t read_exact(int fd, uint8_t* buf, size_t len);
+  ssize_t write_all(int fildes, const void *buf, size_t nbyte);
 };
 }  // namespace rr_bno055
