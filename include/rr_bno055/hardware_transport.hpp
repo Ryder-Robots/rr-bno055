@@ -28,7 +28,6 @@ extern "C" {
 #include <stdexcept>
 #include <iostream>
 #include <atomic>
-#include <cstring>
 #include <unistd.h>
 
 namespace rr_bno055

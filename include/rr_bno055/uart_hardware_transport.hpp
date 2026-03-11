@@ -21,6 +21,7 @@
 #pragma once
 
 #include <iostream>
+#include <cstring>
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>

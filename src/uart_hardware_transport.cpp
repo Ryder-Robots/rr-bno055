@@ -138,11 +138,6 @@ int8_t UARTHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8
     std::cerr << "[UARTHardwareTransport] serial communication is not initialised";
     return -1;
   }
-  if (transport_ == -1)
-  {
-    std::cerr << "[UARTHardwareTransport] no IO to serial port";
-    return -1;
-  }
 
   uint8_t packet[] = { UART_START_BYTE, UART_READ, reg_addr, len };
   if (write_all(transport_, packet, 4) == -1)
@@ -188,11 +183,6 @@ int8_t UARTHardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint
     return -1;
   }
 
-  if (transport_ == -1)
-  {
-    std::cerr << "[UARTHardwareTransport] no IO to serial port";
-    return -1;
-  }
   std::vector<uint8_t> packet;
   packet.reserve(4 + len);
 
