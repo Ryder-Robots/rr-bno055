@@ -24,9 +24,10 @@ using namespace rr_bno055;
 
 HardwareTransport::HardwareTransport()
 {
-  device_.bus_write = bus_write_tmpl;
-  device_.bus_read = bus_read_tmpl;
-  device_.delay_msec = delay_msec;
+  // TODO: this is to be moved to the device.
+  // device_.bus_write = bus_write_tmpl;
+  // device_.bus_read = bus_read_tmpl;
+  // device_.delay_msec = delay_msec;
   transport_ = -1;
 }
 
@@ -35,6 +36,13 @@ HardwareTransport::~HardwareTransport()
   deinitialize();
 }
 
+
+// Note initlisation for hardware transport is performed within the factory
+// this should check for the existence of the shared object and if it exits and
+// is_initilised returns true, then no further action is required.
+//
+// Note that factory may need to be its own node, this is it can be shared
+// with other hardware drivers.
 void HardwareTransport::initialize(const TransportConfig& transport_config)
 {
   if (is_initialized_.load(std::memory_order_acquire))
@@ -49,34 +57,15 @@ void HardwareTransport::initialize(const TransportConfig& transport_config)
     throw std::runtime_error("[HardwareTransport] could not open transport.");
   }
   instance_ = this;
-  if (bno055_init(&device_) != 0)
-  {
-    instance_ = nullptr;
-    throw std::runtime_error("[HardwareTransport] could not initialize IMU");
-  }
-
-  // set power mode to normal.
-  if (bno055_set_power_mode(BNO055_POWER_MODE_NORMAL) != 0)
-  {
-    instance_ = nullptr;
-    throw std::runtime_error("[HardwareTransport] could not set power mode");
-  }
-
   is_initialized_.store(true, std::memory_order_release);
 }
 
+// TODO this needs to change, there should not ba specific bno050 command in here, I think this will
+// bno055_set_power_mode(BNO055_POWER_MODE_LOWPOWER) needs to be higher level up, 
 void HardwareTransport::deinitialize()
 {
   if (transport_ != -1)
   {
-    if (is_initialized_.load(std::memory_order_acquire))
-    {
-      // Attempt to set low power mode; continue deinitialization even if this fails.
-      if (bno055_set_power_mode(BNO055_POWER_MODE_LOWPOWER) != 0)
-      {
-        std::cerr << "[HardwareTransport] unable to set device to low power mode" << std::endl;
-      }
-    }
     close(transport_);
   }
   transport_ = -1;
@@ -87,6 +76,11 @@ void HardwareTransport::deinitialize()
 
 void HardwareTransport::delay_msec(uint32_t msec)
 {
+  if (!instance_)
+  {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(instance_->bus_mutex_);
   std::this_thread::sleep_for(std::chrono::milliseconds(msec));
 }
 
@@ -96,6 +90,7 @@ int8_t HardwareTransport::bus_read_tmpl(uint8_t dev_addr, uint8_t reg_addr, uint
   {
     return -1;
   }
+  std::lock_guard<std::mutex> lock(instance_->bus_mutex_);
   return instance_->bus_read(dev_addr, reg_addr, data, len);
 }
 
@@ -105,10 +100,7 @@ int8_t HardwareTransport::bus_write_tmpl(uint8_t dev_addr, uint8_t reg_addr, uin
   {
     return -1;
   }
+  std::lock_guard<std::mutex> lock(instance_->bus_mutex_);
   return instance_->bus_write(dev_addr, reg_addr, data, len);
 }
 
-bno055_t HardwareTransport::get_device()
-{
-  return device_;
-}

@@ -21,13 +21,14 @@
 #pragma once
 
 #include <memory>
+#include <array>
+#include <mutex>
 #include "rr_bno055/hardware_transport.hpp"
 #include "rr_bno055/i2c_hardware_transport.hpp"
 #include "rr_bno055/uart_hardware_transport.hpp"
 
 namespace rr_bno055
 {
-
 /**
  * @brief Opens and configures the transport file descriptor for the BNO055.
  *
@@ -39,14 +40,19 @@ class TransportFactory
 {
 public:
   TransportFactory() = default;
-
-  ~TransportFactory() = default;
+  virtual ~TransportFactory() = default;
 
   /**
    * @brief Opens the transport described by the stored config.
-   * @return Returns unique pointer to Hardware Transport.
+   * @return Returns pointer to Hardware Transport.
    */
-  std::unique_ptr<HardwareTransport> create_transport(const TransportConfig& config);
+  std::shared_ptr<HardwareTransport> get_or_create_transport(const TransportConfig& config);
+  void cleanup();
+
+private:
+  std::array<std::weak_ptr<HardwareTransport>, 2> hws_;
+  std::mutex mutex_;
+
 };
 
 }  // namespace rr_bno055

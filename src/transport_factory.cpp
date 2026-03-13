@@ -22,20 +22,44 @@
 
 using namespace rr_bno055;
 
- std::unique_ptr<HardwareTransport> TransportFactory::create_transport(const TransportConfig& config)
+std::shared_ptr<HardwareTransport> TransportFactory::get_or_create_transport(const TransportConfig& config)
 {
-  std::unique_ptr<HardwareTransport> hw;
+  std::lock_guard<std::mutex> lock(mutex_);
+  std::shared_ptr<HardwareTransport> hw;
+  // attempt to get shared object first.
+  if (hw = hws_[config.type].lock())
+  {
+    if (hw->is_initilized()) {
+      return hw;
+    }
+    // else: transport exists but uninitialized, fall through and recreate
+  }
+
+  // initialize new object, keep them on separate buses.
   switch (config.type)
   {
     case I2C:
-      hw = std::make_unique<I2CHardwareTransport>();
+      hw = std::make_shared<I2CHardwareTransport>();
       hw->initialize(config);
+      hws_[I2C] = hw;
       return hw;
     case UART:
-      hw = std::make_unique<UARTHardwareTransport>();
+      hw = std::make_shared<UARTHardwareTransport>();
       hw->initialize(config);
+      hws_[UART] = hw;
       return hw;
     default:
       throw std::runtime_error("[TransportFactory] non supported transport");
+  }
+}
+
+void TransportFactory::cleanup()
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  for (auto& h : hws_) {
+    if (auto hw = h.lock()) {
+      hw->deinitialize();
+    }
+    h.reset();
   }
 }

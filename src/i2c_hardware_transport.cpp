@@ -24,12 +24,6 @@ using namespace rr_bno055;
 
 int I2CHardwareTransport::initialize_trans(const TransportConfig& transport_config)
 {
-  if (transport_config.device.empty() || !(transport_config.address == 0x28 || transport_config.address == 0x29))
-  {
-    std::cerr << "[I2CHardwareTransport] Failed to open device: no device defined or address not one of 28 or 29";
-    return -1;
-  }
-
   int transport = open(transport_config.device.c_str(), O_RDWR);
   if (transport != -1)
   {
@@ -45,8 +39,6 @@ int I2CHardwareTransport::initialize_trans(const TransportConfig& transport_conf
     std::cerr << "[I2CHardwareTransport] could not open device, verify that device string is correct: " << strerror(errno);
     return -1;
   }
-
-  config_address_ = transport_config.address;
   return transport;
 }
 
@@ -60,13 +52,13 @@ int8_t I2CHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_
 
   struct i2c_msg msgs[2];
 
-  msgs[0].addr = config_address_;
+  msgs[0].addr = reg_addr;
   msgs[0].flags = 0;  // write
   msgs[0].len = 1;
   msgs[0].buf = &reg_addr;
 
   // Message 2: read the response (repeated START, not a new START)
-  msgs[1].addr = config_address_;
+  msgs[1].addr = reg_addr;
   msgs[1].flags = I2C_M_RD;  // read
   msgs[1].len = len;
   msgs[1].buf = data;
@@ -96,7 +88,7 @@ int8_t I2CHardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8
   std::memcpy(&buf[1], data, len);
 
   struct i2c_msg msg;
-  msg.addr = config_address_;
+  msg.addr = reg_addr;
   msg.flags = 0;  // write
   msg.len = len + 1;
   msg.buf = buf;

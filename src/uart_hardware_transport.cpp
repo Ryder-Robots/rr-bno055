@@ -40,6 +40,8 @@ int UARTHardwareTransport::initialize_trans(const TransportConfig& transport_con
     return -1;
   }
 
+  // TODO: this should be set in config and not here, to allow the class to be used with different more 
+  // generic Bosch sensors.
   // Baud rate - BNO055 UART default is 115200
   cfsetospeed(&tty, B115200);
   cfsetispeed(&tty, B115200);

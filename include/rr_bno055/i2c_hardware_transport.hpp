@@ -39,8 +39,5 @@ public:
   int8_t bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) override;
 
   int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) override;
-
-private:
-  uint8_t config_address_;
 };
 }  // namespace rr_bno055

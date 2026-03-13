@@ -20,15 +20,13 @@
 
 #pragma once
 
-extern "C" {
-#include "bno055.h"
-}
 #include <thread>
 #include <string>
 #include <stdexcept>
 #include <iostream>
 #include <atomic>
 #include <unistd.h>
+#include <mutex>
 
 namespace rr_bno055
 {
@@ -159,17 +157,11 @@ public:
    */
   virtual int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) = 0;
 
-  /**
-   * @brief Returns a copy of the Bosch SensorAPI device struct.
-   *
-   * The returned struct contains the function pointers wired to this transport
-   * and can be passed to higher-level Bosch API calls (e.g. reading sensor data).
-   * Only valid after `initialize()` has succeeded.
-   */
-  bno055_t get_device();
+  bool is_initilized() {return is_initialized_.load(std::memory_order_acquire);}
 
 protected:
   std::atomic<bool> is_initialized_{ false };
+  std::mutex bus_mutex_;
 
   int transport_;  ///< Open file descriptor for the I2C or UART device.
 
@@ -179,8 +171,6 @@ private:
 
   /// Static trampoline into `instance_->bus_write()` for the Bosch C API.
   static int8_t bus_write_tmpl(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len);
-
-  bno055_t device_;  ///< Bosch SensorAPI struct holding function pointers.
 
   inline static HardwareTransport* instance_ = nullptr;  ///< Singleton pointer set in constructor.
 };

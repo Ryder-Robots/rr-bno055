@@ -34,7 +34,7 @@ TEST(TransportFactoryI2CTest, InvalidAddressThrows)
   cfg.address = 0x30;
 
   TransportFactory factory;
-  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
+  EXPECT_THROW(factory.get_or_create_transport(cfg), std::runtime_error);
 }
 
 TEST(TransportFactoryI2CTest, Address0x28WithBadDeviceThrows)
@@ -46,7 +46,7 @@ TEST(TransportFactoryI2CTest, Address0x28WithBadDeviceThrows)
   cfg.device  = "/dev/nonexistent-i2c";
 
   TransportFactory factory;
-  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
+  EXPECT_THROW(factory.get_or_create_transport(cfg), std::runtime_error);
 }
 
 TEST(TransportFactoryI2CTest, Address0x29WithBadDeviceThrows)
@@ -56,7 +56,7 @@ TEST(TransportFactoryI2CTest, Address0x29WithBadDeviceThrows)
   cfg.device  = "/dev/nonexistent-i2c";
 
   TransportFactory factory;
-  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
+  EXPECT_THROW(factory.get_or_create_transport(cfg), std::runtime_error);
 }
 
 TEST(TransportFactoryI2CTest, AddressBelowRangeThrows)
@@ -65,7 +65,7 @@ TEST(TransportFactoryI2CTest, AddressBelowRangeThrows)
   cfg.address = 0x00;
 
   TransportFactory factory;
-  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
+  EXPECT_THROW(factory.get_or_create_transport(cfg), std::runtime_error);
 }
 
 TEST(TransportFactoryI2CTest, AddressAboveRangeThrows)
@@ -74,7 +74,7 @@ TEST(TransportFactoryI2CTest, AddressAboveRangeThrows)
   cfg.address = 0xFF;
 
   TransportFactory factory;
-  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
+  EXPECT_THROW(factory.get_or_create_transport(cfg), std::runtime_error);
 }
 
 // ── UART ─────────────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ TEST(TransportFactoryUARTTest, NonexistentDeviceThrows)
   cfg.device = "/dev/nonexistent-uart";
 
   TransportFactory factory;
-  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
+  EXPECT_THROW(factory.get_or_create_transport(cfg), std::runtime_error);
 }
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ TEST(TransportFactoryDispatchTest, I2CTypeCallsI2CPath)
   cfg.address = 0x01;  // invalid
 
   TransportFactory factory;
-  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
+  EXPECT_THROW(factory.get_or_create_transport(cfg), std::runtime_error);
 }
 
 TEST(TransportFactoryDispatchTest, UARTTypeCallsUARTPath)
@@ -110,5 +110,5 @@ TEST(TransportFactoryDispatchTest, UARTTypeCallsUARTPath)
   cfg.device = "/dev/nonexistent-uart";
 
   TransportFactory factory;
-  EXPECT_THROW(factory.create_transport(cfg), std::runtime_error);
+  EXPECT_THROW(factory.get_or_create_transport(cfg), std::runtime_error);
 }

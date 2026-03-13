@@ -18,17 +18,40 @@ The driver defaults to `/dev/i2c-1` at I2C address `0x28`.
 | PS1        | GND                  |                                      |
 | ADR / COM3 | GND                  | Pull high for address 0x29           |
 
-Enable I2C on the Raspberry Pi with:
+### Enabling I2C on Ubuntu (Raspberry Pi)
+
+`raspi-config` is not available on Ubuntu. Enable I2C by adding the device tree
+overlay to `/boot/firmware/config.txt` (the firmware config file used by Ubuntu
+on Raspberry Pi — **not** `/boot/config.txt`):
 
 ```bash
-sudo raspi-config   # Interface Options -> I2C -> Enable
+sudo nano /boot/firmware/config.txt
 ```
 
-Verify the sensor is visible before running the driver:
+Add the following line, then save and reboot:
+
+```
+dtoverlay=i2c1
+```
+
+After reboot, confirm the bus is present:
 
 ```bash
+ls /dev/i2c*       # should include /dev/i2c-1
+```
+
+Install `i2c-tools` if not already present, then verify the sensor is visible:
+
+```bash
+sudo apt install i2c-tools
 sudo i2cdetect -y 1   # should show 0x28 (or 0x29)
 ```
+
+> **Note:** On Ubuntu the user running the driver must be a member of the `i2c`
+> group, or the node must run as root.  Add your user with:
+> ```bash
+> sudo usermod -aG i2c $USER   # log out and back in to take effect
+> ```
 
 ### UART (optional)
 
