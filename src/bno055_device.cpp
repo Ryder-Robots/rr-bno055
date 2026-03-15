@@ -30,40 +30,44 @@ bool Bno055Device::initialize(std::shared_ptr<RrBNO055Config> conf, std::shared_
     std::cerr << "[Bno055Device] Failed to open device: no device defined or address not one of 28 or 29" << std::endl;
     return false;
   }
-  if (!(hw && hw_->is_initilized()))
+  if (!hw || !hw->is_initilized())
   {
     std::cerr << "[Bno055Device] hardware transport is not initilized" << std::endl;
     return false;
   }
+  hw_ = hw;
 
   if (bno055_init(&device_) != 0)
   {
     std::cerr << "[Bno055Device] could not initialize IMU" << std::endl;
+    hw_ = nullptr;
     return false;
   }
 
-  // set power mode to normal. TODO: use set_power_mode
+  // set power mode to normal.
   if (!set_power_mode(RrBnoPowerMode::RRBNO055_POWER_MODE_NORMAL))
   {
     std::cerr << "[Bno055Device] could not set power mode" << std::endl;
+    hw_ = nullptr;
     return false;
   }
 
-  // set oritentation.
+  // set orientation.
   if (set_op_mode(RRBNO055_OPERATION_MODE_CONFIG))
   {
     if (!set_axis_remap(conf->axis_remap, conf->axis_sign))
     {
       std::cerr << "[Bno055Device] could not set intended orientation" << std::endl;
+      hw_ = nullptr;
       return false;
     }
   }
   else
   {
     std::cerr << "[Bno055Device] unable to enter configuration mode" << std::endl;
+    hw_ = nullptr;
     return false;
   }
-  hw_ = hw;
 
   return true;
 }
@@ -204,7 +208,15 @@ bool Bno055Device::reset()
  */
 bool Bno055Device::set_axis_remap(RrBno055AxisRemap remap, RrBno055AxisSign sign)
 {
-  bno055_set_axis_remap_value(remap);
-  bno055_set_remap_z_sign(sign);
+  if (bno055_set_axis_remap_value(remap) != BNO055_SUCCESS)
+  {
+    std::cerr << "[Bno055Device] set_axis_remap: failed to set remap value" << std::endl;
+    return false;
+  }
+  if (bno055_set_remap_z_sign(sign) != BNO055_SUCCESS)
+  {
+    std::cerr << "[Bno055Device] set_axis_remap: failed to set remap sign" << std::endl;
+    return false;
+  }
   return true;
 }
