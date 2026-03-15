@@ -22,12 +22,12 @@
 
 using namespace rr_bno055;
 
-int UARTHardwareTransport::initialize_trans(const TransportConfig& transport_config)
+int UARTHardwareTransport::initialize_trans(std::shared_ptr<TransportConfig> transport_config)
 {
-  int fd = open(transport_config.device.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
+  int fd = open(transport_config->device.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
   if (fd < 0)
   {
-    std::cerr << "[UARTHardwareTransport] Failed to open UART device " << transport_config.device << ": " << strerror(errno)
+    std::cerr << "[UARTHardwareTransport] Failed to open UART device " << transport_config->device << ": " << strerror(errno)
               << std::endl;
     return -1;
   }

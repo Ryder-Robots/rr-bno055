@@ -25,28 +25,29 @@ using namespace rr_bno055;
 
 TEST(TransportConfigTest, DefaultTypeIsI2C)
 {
-  TransportConfig cfg;
+  auto cfg = TransportConfig::Builder{}.build();
   EXPECT_EQ(cfg.type, I2C);
 }
 
 TEST(TransportConfigTest, DefaultDeviceIsI2c1)
 {
-  TransportConfig cfg;
+  auto cfg = TransportConfig::Builder{}.build();
   EXPECT_EQ(cfg.device, "/dev/i2c-1");
 }
 
 TEST(TransportConfigTest, DefaultAddressIs0x28)
 {
-  TransportConfig cfg;
+  auto cfg = TransportConfig::Builder{}.build();
   EXPECT_EQ(cfg.address, 0x28);
 }
 
 TEST(TransportConfigTest, CustomValuesAreStored)
 {
-  TransportConfig cfg;
-  cfg.type    = UART;
-  cfg.device  = "/dev/ttyAMA0";
-  cfg.address = 0x29;
+  auto cfg = TransportConfig::Builder{}
+    .with_type(UART)
+    .with_device("/dev/ttyAMA0")
+    .with_address(0x29)
+    .build();
 
   EXPECT_EQ(cfg.type,    UART);
   EXPECT_EQ(cfg.device,  "/dev/ttyAMA0");

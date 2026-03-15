@@ -43,7 +43,7 @@ HardwareTransport::~HardwareTransport()
 //
 // Note that factory may need to be its own node, this is it can be shared
 // with other hardware drivers.
-void HardwareTransport::initialize(const TransportConfig& transport_config)
+void HardwareTransport::initialize(std::shared_ptr<TransportConfig> transport_config)
 {
   if (is_initialized_.load(std::memory_order_acquire))
   {

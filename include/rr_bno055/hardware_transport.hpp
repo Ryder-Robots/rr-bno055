@@ -27,31 +27,11 @@
 #include <atomic>
 #include <unistd.h>
 #include <mutex>
+#include <memory>
+#include "rr_bno055/transport_config.hpp"
 
 namespace rr_bno055
 {
-
-/// Selects the physical interface used to communicate with the BNO055.
-enum TransportType
-{
-  I2C,   ///< I2C bus (PS1=0, PS0=0 on BNO055)
-  UART,  ///< UART / serial (PS1=0, PS0=1 on BNO055)
-};
-
-/**
- * @brief Configuration passed to `TransportFactory` and `HardwareTransport::initialize()`.
- *
- * Defaults are suitable for a BNO055 breakout wired to the Raspberry Pi
- * primary I2C bus with the address pin (ADR/COM3) pulled low.
- */
-struct TransportConfig
-{
-  TransportType type = I2C;           ///< Interface type.
-  std::string device = "/dev/i2c-1";  ///< Device node to open.
-
-  /// I2C address of the BNO055.  Pull ADR/COM3 high to use 0x29 instead.
-  uint8_t address = 0x28;
-};
 
 /**
  * @brief Low-level I2C/UART transport adapter for the Bosch BNO055 IMU.
@@ -83,7 +63,6 @@ struct TransportConfig
 class HardwareTransport
 {
 public:
-
   // Force singleton.
   HardwareTransport(const HardwareTransport&) = delete;
   HardwareTransport& operator=(const HardwareTransport&) = delete;
@@ -117,7 +96,7 @@ public:
    *
    * @param transport_config  Device path, type, and I2C address to use.
    */
-  void initialize(const TransportConfig& transport_config);
+  void initialize(std::shared_ptr<TransportConfig> transport_config);
 
   /**
    * @brief Opens the underlying transport (I2C or UART) described by @p config.
@@ -127,7 +106,7 @@ public:
    *
    * @param transport_config  Device path, type, and I2C address to use.
    */
-  virtual int initialize_trans(const TransportConfig& transport_config) = 0;
+  virtual int initialize_trans(std::shared_ptr<TransportConfig> transport_config) = 0;
 
   /**
    * @brief Sets the device to low-power mode and closes the transport file descriptor.
@@ -157,7 +136,10 @@ public:
    */
   virtual int8_t bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) = 0;
 
-  bool is_initilized() {return is_initialized_.load(std::memory_order_acquire);}
+  bool is_initilized()
+  {
+    return is_initialized_.load(std::memory_order_acquire);
+  }
 
 protected:
   std::atomic<bool> is_initialized_{ false };

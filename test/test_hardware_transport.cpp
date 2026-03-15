@@ -56,9 +56,8 @@ TEST(HardwareTransportTest, InitializeThrowsOnBadDevice)
 {
   I2CHardwareTransport transport;
 
-  TransportConfig cfg;
-  cfg.device  = "/dev/nonexistent-i2c";
-  cfg.address = 0x28;
+  auto cfg = std::make_shared<TransportConfig>(
+    TransportConfig::Builder{}.with_device("/dev/nonexistent-i2c").with_address(0x28).build());
 
   // open() will fail; initialize() must throw.
   EXPECT_THROW(transport.initialize(cfg), std::runtime_error);
@@ -68,9 +67,8 @@ TEST(HardwareTransportTest, InitializeThrowsOnInvalidAddress)
 {
   I2CHardwareTransport transport;
 
-  TransportConfig cfg;
-  cfg.device  = "/dev/i2c-1";
-  cfg.address = 0x30;  // not a valid BNO055 address
+  auto cfg = std::make_shared<TransportConfig>(
+    TransportConfig::Builder{}.with_device("/dev/i2c-1").with_address(0x30).build());
 
   EXPECT_THROW(transport.initialize(cfg), std::runtime_error);
 }

@@ -22,12 +22,12 @@
 
 using namespace rr_bno055;
 
-int I2CHardwareTransport::initialize_trans(const TransportConfig& transport_config)
+int I2CHardwareTransport::initialize_trans(std::shared_ptr<TransportConfig> transport_config)
 {
-  int transport = open(transport_config.device.c_str(), O_RDWR);
+  int transport = open(transport_config->device.c_str(), O_RDWR);
   if (transport != -1)
   {
-    if (ioctl(transport, I2C_SLAVE, transport_config.address))
+    if (ioctl(transport, I2C_SLAVE, transport_config->address))
     {
       std::cerr << "[I2CHardwareTransport] unable to create I2C slave: " << strerror(errno);
       close(transport);

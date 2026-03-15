@@ -19,41 +19,60 @@
 // SOFTWARE.
 
 #pragma once
-
-#include <memory>
-#include <array>
-#include <mutex>
-#include "rr_bno055/hardware_transport.hpp"
-#include "rr_bno055/i2c_hardware_transport.hpp"
-#include "rr_bno055/uart_hardware_transport.hpp"
-#include "rr_bno055/bno055_transport_config.hpp"
+#include <string>
+#include <cstdint>
 
 namespace rr_bno055
 {
-/**
- * @brief Opens and configures the transport file descriptor for the BNO055.
- *
- * Instantiate with a `TransportConfig`, then call `get_transport()` to
- * receive a ready-to-use file descriptor.  The caller is responsible for
- * closing it via `HardwareTransport::deinitialize()`.
- */
-class TransportFactory
+
+enum TransportType
+{
+  I2C,   ///< I2C bus (PS1=0, PS0=0 on BNO055)
+  UART,  ///< UART / serial (PS1=0, PS0=1 on BNO055)
+};
+
+class TransportConfig
 {
 public:
-  TransportFactory() = default;
-  virtual ~TransportFactory() = default;
+  const TransportType type;
+  const std::string device;
+  const uint8_t address;
 
-  /**
-   * @brief Opens the transport described by the stored config.
-   * @return Returns pointer to Hardware Transport.
-   */
-  std::shared_ptr<HardwareTransport> get_or_create_transport(std::shared_ptr<RrBNO055Config> config);
-  void cleanup();
+  class Builder
+  {
+  public:
+    Builder& with_type(TransportType type)
+    {
+      type_ = type;
+      return *this;
+    }
+    Builder& with_device(std::string device)
+    {
+      device_ = std::move(device);
+      return *this;
+    }
+    Builder& with_address(uint8_t address)
+    {
+      address_ = address;
+      return *this;
+    }
 
-private:
-  std::array<std::weak_ptr<HardwareTransport>, 2> hws_;
-  std::mutex mutex_;
+    TransportConfig build() const
+    {
+      return TransportConfig(type_, device_, address_);
+    }
 
+  protected:
+    TransportType type_ = I2C;
+    std::string device_ = "/dev/i2c-1";
+    uint8_t address_ = 0x28;
+  };
+
+protected:
+  TransportConfig(TransportType type, std::string device, uint8_t address)
+    : type(type), device(std::move(device)), address(address)
+  {
+  }
 };
 
 }  // namespace rr_bno055

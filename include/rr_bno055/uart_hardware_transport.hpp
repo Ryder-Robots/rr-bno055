@@ -34,7 +34,7 @@ namespace rr_bno055
 class UARTHardwareTransport : public HardwareTransport
 {
 public:
-  int initialize_trans(const TransportConfig& transport_config) override;
+  int initialize_trans(std::shared_ptr<TransportConfig> transport_config) override;
 
   int8_t bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len) override;
 

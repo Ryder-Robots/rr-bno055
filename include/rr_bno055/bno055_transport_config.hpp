@@ -1,0 +1,82 @@
+// Copyright (c) 2026 Ryder Robots
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+#pragma once
+
+#include "bno055.h"
+#include "rr_bno055/transport_config.hpp"
+
+namespace rr_bno055
+{
+enum RrBno055AxisRemap : uint8_t
+{
+  RRBNO055_REMAP_X_Y = BNO055_REMAP_X_Y,                  // 0x21: Z=Z; X=Y; Y=X
+  RRBNO055_REMAP_Y_Z = BNO055_REMAP_Y_Z,                  // 0x18: X=X; Y=Z; Z=Y
+  RRBNO055_REMAP_Z_X = BNO055_REMAP_Z_X,                  // 0x06: Y=Y; X=Z; Z=X
+  RRBNO055_REMAP_X_Y_Z_TYPE0 = BNO055_REMAP_X_Y_Z_TYPE0,  // 0x12: X=Z; Y=X; Z=Y
+  RRBNO055_REMAP_X_Y_Z_TYPE1 = BNO055_REMAP_X_Y_Z_TYPE1,  // 0x09: X=Y; Y=Z; Z=X
+  RRBNO055_DEFAULT_AXIS = BNO055_DEFAULT_AXIS,            // 0x24: X=X; Y=Y; Z=Z
+};
+
+enum RrBno055AxisSign : uint8_t
+{
+  RRBNO055_REMAP_AXIS_POSITIVE = BNO055_REMAP_AXIS_POSITIVE,
+  RRBNO055_REMAP_AXIS_NEGATIVE = BNO055_REMAP_AXIS_NEGATIVE,
+};
+class RrBNO055Config : public TransportConfig
+{
+public:
+  const RrBno055AxisRemap axis_remap;
+  const RrBno055AxisSign axis_sign;
+
+  class Builder : public TransportConfig::Builder
+  {
+  public:
+    Builder& with_axis_remap(RrBno055AxisRemap axis_remap)
+    {
+      axis_remap_ = axis_remap;
+      return *this;
+    }
+    Builder& with_axis_sign(RrBno055AxisSign axis_sign)
+    {
+      axis_sign_ = axis_sign;
+      return *this;
+    }
+
+    RrBNO055Config build() const
+    {
+      return RrBNO055Config(type_, device_, address_, axis_remap_, axis_sign_);
+    }
+
+  private:
+    RrBno055AxisRemap axis_remap_ = RRBNO055_REMAP_X_Y;
+    RrBno055AxisSign axis_sign_ = RRBNO055_REMAP_AXIS_NEGATIVE;
+  };
+
+private:
+  RrBNO055Config(TransportType type, std::string device, uint8_t address, RrBno055AxisRemap remap,
+                 RrBno055AxisSign sign)
+    : TransportConfig(type, std::move(device), address)
+    , axis_remap(remap)  // parameter named remap, member named axis_remap
+    , axis_sign(sign)
+  {
+  }
+};
+}  // namespace rr_bno055

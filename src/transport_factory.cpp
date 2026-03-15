@@ -22,12 +22,12 @@
 
 using namespace rr_bno055;
 
-std::shared_ptr<HardwareTransport> TransportFactory::get_or_create_transport(const TransportConfig& config)
+std::shared_ptr<HardwareTransport> TransportFactory::get_or_create_transport(std::shared_ptr<RrBNO055Config> config)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   std::shared_ptr<HardwareTransport> hw;
   // attempt to get shared object first.
-  if (hw = hws_[config.type].lock())
+  if (hw = hws_[config->type].lock())
   {
     if (hw->is_initilized()) {
       return hw;
@@ -36,7 +36,7 @@ std::shared_ptr<HardwareTransport> TransportFactory::get_or_create_transport(con
   }
 
   // initialize new object, keep them on separate buses.
-  switch (config.type)
+  switch (config->type)
   {
     case I2C:
       hw = std::make_shared<I2CHardwareTransport>();
