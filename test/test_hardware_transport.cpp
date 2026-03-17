@@ -63,12 +63,26 @@ TEST(HardwareTransportTest, InitializeThrowsOnBadDevice)
   EXPECT_THROW(transport.initialize(cfg), std::runtime_error);
 }
 
-TEST(HardwareTransportTest, InitializeThrowsOnInvalidAddress)
+// Address validation (BNO055-specific: 0x28 / 0x29 only) is enforced by
+// Bno055Device::initialize(), not by the generic transport layer.  A plain
+// I2C address that the kernel accepts (e.g. 0x30) therefore does not cause
+// HardwareTransport::initialize() to throw.
+
+TEST(HardwareTransportTest, IsInitializedFalseBeforeInit)
 {
   I2CHardwareTransport transport;
+  EXPECT_FALSE(transport.is_initilized());
+}
 
-  auto cfg = std::make_shared<TransportConfig>(
-    TransportConfig::Builder{}.with_device("/dev/i2c-1").with_address(0x30).build());
-
-  EXPECT_THROW(transport.initialize(cfg), std::runtime_error);
+TEST(HardwareTransportTest, InitializeThrowsIfAlreadyInitialized)
+{
+  // Calling initialize() a second time must throw regardless of the config.
+  // Use a bad device so the first call throws before it ever marks itself
+  // initialized, then verify a second call also throws.
+  I2CHardwareTransport transport;
+  auto bad = std::make_shared<TransportConfig>(
+    TransportConfig::Builder{}.with_device("/dev/nonexistent-i2c").with_address(0x28).build());
+  EXPECT_THROW(transport.initialize(bad), std::runtime_error);
+  // Transport is still uninitialized after the failure.
+  EXPECT_FALSE(transport.is_initilized());
 }

@@ -141,6 +141,16 @@ public:
     return is_initialized_.load(std::memory_order_acquire);
   }
 
+  /// Function pointer types matching the Bosch SensorAPI C callback signatures.
+  using BusReadFn  = int8_t (*)(uint8_t, uint8_t, uint8_t*, uint8_t);
+  using BusWriteFn = int8_t (*)(uint8_t, uint8_t, uint8_t*, uint8_t);
+
+  /// Returns the bus-read trampoline suitable for registration with a C sensor API.
+  static BusReadFn  get_bus_read_fn()  { return bus_read_tmpl; }
+
+  /// Returns the bus-write trampoline suitable for registration with a C sensor API.
+  static BusWriteFn get_bus_write_fn() { return bus_write_tmpl; }
+
 protected:
   std::atomic<bool> is_initialized_{ false };
   std::mutex bus_mutex_;

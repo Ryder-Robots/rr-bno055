@@ -130,8 +130,10 @@ find_package(GTest REQUIRED)
 
 add_executable(rr_bno055_tests
   test/test_transport_config.cpp
+  test/test_bno055_transport_config.cpp
   test/test_transport_factory.cpp
   test/test_hardware_transport.cpp
+  test/test_bno055_device.cpp
 )
 
 target_link_libraries(rr_bno055_tests

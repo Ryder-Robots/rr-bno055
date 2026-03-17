@@ -39,36 +39,22 @@ static std::shared_ptr<RrBNO055Config> make_cfg(
 
 // ── I2C ──────────────────────────────────────────────────────────────────────
 
-TEST(TransportFactoryI2CTest, InvalidAddressThrows)
+TEST(TransportFactoryI2CTest, BadDeviceThrowsAddress0x28)
 {
-  // Address 0x30 is not a valid BNO055 address — initialize_trans returns -1,
-  // so create_transport must throw.
-  TransportFactory factory;
-  EXPECT_THROW(factory.get_or_create_transport(make_cfg(I2C, "/dev/i2c-1", 0x30)), std::runtime_error);
-}
-
-TEST(TransportFactoryI2CTest, Address0x28WithBadDeviceThrows)
-{
-  // 0x28 passes address validation; open() fails on the nonexistent device,
-  // so create_transport must still throw.
+  // open() fails on the nonexistent device → initialize_trans returns -1 → throw.
   TransportFactory factory;
   EXPECT_THROW(factory.get_or_create_transport(make_cfg(I2C, "/dev/nonexistent-i2c", 0x28)), std::runtime_error);
 }
 
-TEST(TransportFactoryI2CTest, Address0x29WithBadDeviceThrows)
+TEST(TransportFactoryI2CTest, BadDeviceThrowsAddress0x29)
 {
   TransportFactory factory;
   EXPECT_THROW(factory.get_or_create_transport(make_cfg(I2C, "/dev/nonexistent-i2c", 0x29)), std::runtime_error);
 }
 
-TEST(TransportFactoryI2CTest, AddressBelowRangeThrows)
+TEST(TransportFactoryI2CTest, AddressAbove7BitThrows)
 {
-  TransportFactory factory;
-  EXPECT_THROW(factory.get_or_create_transport(make_cfg(I2C, "/dev/i2c-1", 0x00)), std::runtime_error);
-}
-
-TEST(TransportFactoryI2CTest, AddressAboveRangeThrows)
-{
+  // 0xFF exceeds the 7-bit I2C address range; the kernel rejects ioctl(I2C_SLAVE).
   TransportFactory factory;
   EXPECT_THROW(factory.get_or_create_transport(make_cfg(I2C, "/dev/i2c-1", 0xFF)), std::runtime_error);
 }
@@ -85,9 +71,9 @@ TEST(TransportFactoryUARTTest, NonexistentDeviceThrows)
 
 TEST(TransportFactoryDispatchTest, I2CTypeCallsI2CPath)
 {
-  // Invalid address triggers the I2C address guard, confirming the I2C path.
+  // A nonexistent device causes open() to fail on the I2C path → throw.
   TransportFactory factory;
-  EXPECT_THROW(factory.get_or_create_transport(make_cfg(I2C, "/dev/i2c-1", 0x01)), std::runtime_error);
+  EXPECT_THROW(factory.get_or_create_transport(make_cfg(I2C, "/dev/nonexistent-i2c", 0x28)), std::runtime_error);
 }
 
 TEST(TransportFactoryDispatchTest, UARTTypeCallsUARTPath)
@@ -96,3 +82,19 @@ TEST(TransportFactoryDispatchTest, UARTTypeCallsUARTPath)
   TransportFactory factory;
   EXPECT_THROW(factory.get_or_create_transport(make_cfg(UART, "/dev/nonexistent-uart", 0x28)), std::runtime_error);
 }
+
+// ── Cleanup ──────────────────────────────────────────────────────────────────
+
+TEST(TransportFactoryCleanupTest, CleanupWithNoTransportsIsSafe)
+{
+  TransportFactory factory;
+  EXPECT_NO_THROW(factory.cleanup());
+}
+
+TEST(TransportFactoryCleanupTest, CleanupAfterFailedCreateIsSafe)
+{
+  TransportFactory factory;
+  EXPECT_THROW(factory.get_or_create_transport(make_cfg(I2C, "/dev/nonexistent-i2c", 0x28)), std::runtime_error);
+  EXPECT_NO_THROW(factory.cleanup());
+}
+

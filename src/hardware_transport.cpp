@@ -76,11 +76,12 @@ void HardwareTransport::deinitialize()
 
 void HardwareTransport::delay_msec(uint32_t msec)
 {
-  if (!instance_)
+  if (instance_)
   {
+    std::lock_guard<std::mutex> lock(instance_->bus_mutex_);
+    std::this_thread::sleep_for(std::chrono::milliseconds(msec));
     return;
   }
-  std::lock_guard<std::mutex> lock(instance_->bus_mutex_);
   std::this_thread::sleep_for(std::chrono::milliseconds(msec));
 }
 

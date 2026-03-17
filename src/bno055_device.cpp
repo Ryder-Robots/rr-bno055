@@ -37,6 +37,11 @@ bool Bno055Device::initialize(std::shared_ptr<RrBNO055Config> conf, std::shared_
   }
   hw_ = hw;
 
+  device_.dev_addr   = conf->address;
+  device_.bus_read   = HardwareTransport::get_bus_read_fn();
+  device_.bus_write  = HardwareTransport::get_bus_write_fn();
+  device_.delay_msec = HardwareTransport::delay_msec;
+
   if (bno055_init(&device_) != 0)
   {
     std::cerr << "[Bno055Device] could not initialize IMU" << std::endl;
