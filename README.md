@@ -14,10 +14,11 @@ The library is focused on the BNO055 and uses the [Bosch BNO055 SensorAPI](https
 4. [Quick Start](#quick-start)
 5. [API Reference](#api-reference)
 6. [Calibration Workflow](#calibration-workflow)
-7. [Testing](#testing)
-8. [Contributing](#contributing)
-9. [References](#references)
-10. [Third-Party Libraries](#third-party-libraries)
+7. [Orientation Check Tool](#orientation-check-tool)
+8. [Testing](#testing)
+9. [Contributing](#contributing)
+10. [References](#references)
+11. [Third-Party Libraries](#third-party-libraries)
 
 ---
 
@@ -271,6 +272,82 @@ saved offsets — offset save/restore is not yet implemented).
 
 > `is_fully_calibrated()` delegates to `get_calibration_status()` internally —
 > calling both in the same loop does **not** cause duplicate I2C transactions.
+
+---
+
+## Orientation Check Tool
+
+`imu_orientation_check` is a hardware diagnostic utility that connects to a real
+BNO055, waits for full calibration, then displays a live rolling readout of
+orientation, angular velocity, and calibration status — without needing a ROS
+stack. Use it immediately after wiring the sensor to confirm the axis mapping is
+correct before integrating the driver into a larger system.
+
+### Running
+
+```bash
+# Default — I2C on /dev/i2c-1, address 0x28
+sudo ./build/imu_orientation_check
+
+# Different I2C address
+sudo ./build/imu_orientation_check --address 0x29
+
+# UART
+sudo ./build/imu_orientation_check --uart --device /dev/ttyAMA0
+
+# Skip calibration wait, faster refresh rate
+sudo ./build/imu_orientation_check --no-wait --rate 20
+```
+
+### Options
+
+| Option           | Default      | Description                                               |
+| ---------------- | ------------ | --------------------------------------------------------- |
+| `--device PATH`  | `/dev/i2c-1` | I2C or UART device node                                   |
+| `--address ADDR` | `0x28`       | I2C address in hex (`0x28` or `0x29`)                     |
+| `--uart`         | off          | Use UART transport; sets default device to `/dev/ttyAMA0` |
+| `--no-wait`      | off          | Skip calibration wait; start reading immediately          |
+| `--rate HZ`      | `10`         | Refresh rate in Hz (1–50)                                 |
+
+### What it displays
+
+```text
+─── BNO055 Orientation Check ───────────────────
+
+  Euler Angles (ZYX / aerospace)
+  Roll  (X):  +0.12°
+  Pitch (Y):  -1.45°
+  Yaw   (Z):  +87.30°
+
+  Raw Quaternion  (normalised)
+  w=0.9990  x=0.0010  y=-0.0126  z=0.0431
+
+  Angular Velocity (°/s)
+  x=+0.0  y=+0.1  z=-0.1
+
+  Calibration  (0=none  3=full)
+  Sys  [====] 3
+  Gyro [====] 3
+  Accel[====] 3
+  Mag  [====] 3
+```
+
+Angle values are colour-coded: **green** (< 5°), **yellow** (< 30°), **red** (≥ 30°).
+Calibration bars turn green at level 3 and red at level 0.
+
+### Verifying orientation
+
+With the sensor lying flat, label-side up, in its intended mounting orientation:
+
+1. **Roll and Pitch should read near 0°.** Tilt the sensor left/right and
+   forward/back and confirm the correct axis responds.
+2. **Yaw should change smoothly** as you rotate the sensor about the vertical
+   axis (no jumps or reversals).
+3. If an axis is inverted or swapped, adjust `axis_remap` in `RrBNO055Config`
+   (see [Axis Remap](#axis-remap-rrbno055axisremap)) and re-run until the
+   behaviour matches the physical mounting.
+
+Press **Ctrl+C** at any time to exit cleanly.
 
 ---
 

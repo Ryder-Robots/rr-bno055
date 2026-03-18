@@ -150,6 +150,26 @@ target_compile_options(rr_bno055_tests PRIVATE
 
 add_test(NAME rr_bno055_tests COMMAND rr_bno055_tests)
 
+# ─── Tools ───────────────────────────────────────────────────────────────────
+
+add_executable(imu_orientation_check
+  tools/imu_orientation_check.cpp
+)
+
+target_link_libraries(imu_orientation_check
+  rr_bno055
+)
+
+target_compile_options(imu_orientation_check PRIVATE
+  -Wall
+  -Wextra
+  -Wpedantic
+)
+
+install(TARGETS imu_orientation_check
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
 # ─── Debian package (CPack) ──────────────────────────────────────────────────
 set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_NAME "rr-bno055")
