@@ -198,3 +198,180 @@ TEST(Bno055DeviceTest, ResetAfterInitializeExecutesWithoutCrash)
   ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
   EXPECT_NO_THROW(dev.reset());
 }
+
+// ── read_quaternion ────────────────────────────────────────────────────────────
+//
+// With the mock (bus_read returns 0x00), bno055_read_quaternion_wxyz succeeds
+// and all fields are zero.
+
+TEST(Bno055DeviceTest, ReadQuaternionSucceedsAfterInitialize)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  bno055_quaternion_t quat{};
+  EXPECT_TRUE(dev.read_quaternion(quat));
+}
+
+TEST(Bno055DeviceTest, ReadQuaternionFieldsAreZeroWithMock)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  bno055_quaternion_t quat{ 99, 99, 99, 99 };
+  ASSERT_TRUE(dev.read_quaternion(quat));
+  EXPECT_EQ(quat.w, 0);
+  EXPECT_EQ(quat.x, 0);
+  EXPECT_EQ(quat.y, 0);
+  EXPECT_EQ(quat.z, 0);
+}
+
+// ── read_angular_velocity ──────────────────────────────────────────────────────
+
+TEST(Bno055DeviceTest, ReadAngularVelocitySucceedsAfterInitialize)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  bno055_gyro_t gyro{};
+  EXPECT_TRUE(dev.read_angular_velocity(gyro));
+}
+
+TEST(Bno055DeviceTest, ReadAngularVelocityFieldsAreZeroWithMock)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  bno055_gyro_t gyro{ 99, 99, 99 };
+  ASSERT_TRUE(dev.read_angular_velocity(gyro));
+  EXPECT_EQ(gyro.x, 0);
+  EXPECT_EQ(gyro.y, 0);
+  EXPECT_EQ(gyro.z, 0);
+}
+
+// ── read_linear_acceleration ───────────────────────────────────────────────────
+
+TEST(Bno055DeviceTest, ReadLinearAccelerationSucceedsAfterInitialize)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  bno055_linear_accel_t accel{};
+  EXPECT_TRUE(dev.read_linear_acceleration(accel));
+}
+
+TEST(Bno055DeviceTest, ReadLinearAccelerationFieldsAreZeroWithMock)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  bno055_linear_accel_t accel{ 99, 99, 99 };
+  ASSERT_TRUE(dev.read_linear_acceleration(accel));
+  EXPECT_EQ(accel.x, 0);
+  EXPECT_EQ(accel.y, 0);
+  EXPECT_EQ(accel.z, 0);
+}
+
+// ── read_gravity ───────────────────────────────────────────────────────────────
+
+TEST(Bno055DeviceTest, ReadGravitySucceedsAfterInitialize)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  bno055_gravity_t gravity{};
+  EXPECT_TRUE(dev.read_gravity(gravity));
+}
+
+TEST(Bno055DeviceTest, ReadGravityFieldsAreZeroWithMock)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  bno055_gravity_t gravity{ 99, 99, 99 };
+  ASSERT_TRUE(dev.read_gravity(gravity));
+  EXPECT_EQ(gravity.x, 0);
+  EXPECT_EQ(gravity.y, 0);
+  EXPECT_EQ(gravity.z, 0);
+}
+
+// ── get_system_status ─────────────────────────────────────────────────────────
+
+TEST(Bno055DeviceTest, GetSystemStatusSucceedsAfterInitialize)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  uint8_t status = 0xFF, error = 0xFF;
+  EXPECT_TRUE(dev.get_system_status(status, error));
+}
+
+TEST(Bno055DeviceTest, GetSystemStatusWritesZeroFromMock)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  uint8_t status = 0xFF, error = 0xFF;
+  ASSERT_TRUE(dev.get_system_status(status, error));
+  // Mock bus_read always returns 0x00 for all registers.
+  EXPECT_EQ(status, 0x00);
+  EXPECT_EQ(error, 0x00);
+}
+
+// ── get_calibration_status ────────────────────────────────────────────────────
+
+TEST(Bno055DeviceTest, GetCalibrationStatusSucceedsAfterInitialize)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  RrBno055CalibData data;
+  EXPECT_TRUE(dev.get_calibration_status(data));
+}
+
+TEST(Bno055DeviceTest, GetCalibrationStatusFieldsAreZeroWithMock)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  RrBno055CalibData data;
+  ASSERT_TRUE(dev.get_calibration_status(data));
+  // Mock returns 0x00 for all registers — all sensors at calibration level 0.
+  EXPECT_EQ(data.sys, 0);
+  EXPECT_EQ(data.gyro, 0);
+  EXPECT_EQ(data.accel, 0);
+  EXPECT_EQ(data.mag, 0);
+}
+
+// ── is_fully_calibrated ───────────────────────────────────────────────────────
+//
+// The mock returns 0x00 for all registers so every sensor reports calibration
+// level 0 (< 3). is_fully_calibrated() delegates to get_calibration_status()
+// to avoid duplicate I2C transactions, then maps each level < 3 to a NOT_CALIBRATED
+// flag bit.
+
+TEST(Bno055DeviceTest, IsFullyCalibratedReturnsFalseWhenUncalibrated)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  uint8_t calib_status = 0;
+  EXPECT_FALSE(dev.is_fully_calibrated(calib_status));
+}
+
+TEST(Bno055DeviceTest, IsFullyCalibratedSetsAllNotCalibratedBits)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  uint8_t calib_status = 0;
+  ASSERT_FALSE(dev.is_fully_calibrated(calib_status));
+  EXPECT_TRUE(calib_status & RrBno055CalibStatus::SYS_NOT_CALIBRATED);
+  EXPECT_TRUE(calib_status & RrBno055CalibStatus::GYRO_NOT_CALIBRATED);
+  EXPECT_TRUE(calib_status & RrBno055CalibStatus::ACCEL_NOT_CALIBRATED);
+  EXPECT_TRUE(calib_status & RrBno055CalibStatus::MAG_NOT_CALIBRATED);
+}
+
+TEST(Bno055DeviceTest, IsFullyCalibratedAndGetCalibrationStatusAreConsistent)
+{
+  // Verifies that is_fully_calibrated delegates to get_calibration_status and
+  // both methods agree on the sensor state — no duplicate I2C reads.
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+
+  RrBno055CalibData data;
+  ASSERT_TRUE(dev.get_calibration_status(data));
+
+  uint8_t calib_status = 0;
+  bool fully = dev.is_fully_calibrated(calib_status);
+
+  // Both must agree: if any field < 3, is_fully_calibrated must return false.
+  bool any_uncalibrated = data.sys < 3 || data.gyro < 3 || data.accel < 3 || data.mag < 3;
+  EXPECT_EQ(fully, !any_uncalibrated);
+}

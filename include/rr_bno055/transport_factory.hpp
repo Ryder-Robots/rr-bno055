@@ -31,11 +31,15 @@
 namespace rr_bno055
 {
 /**
- * @brief Opens and configures the transport file descriptor for the BNO055.
+ * @brief Sensor-agnostic factory for creating and caching HardwareTransport instances.
  *
- * Instantiate with a `TransportConfig`, then call `get_transport()` to
- * receive a ready-to-use file descriptor.  The caller is responsible for
- * closing it via `HardwareTransport::deinitialize()`.
+ * Creates an I2C or UART transport from a `TransportConfig` and caches it
+ * as a `std::weak_ptr` so that subsequent calls with the same transport type
+ * return the existing instance if it is still alive.
+ *
+ * The factory carries no sensor-specific knowledge; it can be shared across
+ * multiple sensor device classes (e.g. `Bno055Device` and future sensors)
+ * without modification.
  */
 class TransportFactory
 {

@@ -27,7 +27,7 @@ std::shared_ptr<HardwareTransport> TransportFactory::get_or_create_transport(std
   std::lock_guard<std::mutex> lock(mutex_);
   std::shared_ptr<HardwareTransport> hw;
   // attempt to get shared object first.
-  if (hw = hws_[config->type].lock())
+  if ((hw = hws_[config->type].lock()))
   {
     if (hw->is_initilized()) {
       return hw;

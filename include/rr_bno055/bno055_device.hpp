@@ -56,6 +56,28 @@ enum RrBnoPowerMode : uint8_t
   RRBNO055_POWER_MODE_SUSPEND = BNO055_POWER_MODE_SUSPEND,
 };
 
+enum RrBno055CalibStatus : uint8_t
+{
+  FULLY_CALIBRATED = 0x00,
+  SYS_NOT_CALIBRATED = 0x01,
+  GYRO_NOT_CALIBRATED = 0x02,
+  ACCEL_NOT_CALIBRATED = 0x04,
+  MAG_NOT_CALIBRATED = 0x08,
+};
+
+/**
+ * @brief Raw calibration levels for each BNO055 sensor subsystem.
+ * Each field ranges from 0 (uncalibrated) to 3 (fully calibrated).
+ * Only valid if get_calibration_status() returns true.
+ */
+struct RrBno055CalibData
+{
+  uint8_t sys = 0;
+  uint8_t gyro = 0;
+  uint8_t accel = 0;
+  uint8_t mag = 0;
+};
+
 class Bno055Device
 {
 public:
@@ -77,18 +99,82 @@ public:
 
   // Data Reading:
 
-  void readQuaternion();
-  void readAngularVelocity();
-  void readLinearAcceleration();
-  void readGravity();
+  bool read_quaternion(bno055_quaternion_t& quat);
+  bool read_angular_velocity(bno055_gyro_t& gyro);
+  bool read_linear_acceleration(bno055_linear_accel_t& accel);
+  bool read_gravity(bno055_gravity_t& gravity);
 
   // Status:
 
-  void getCalibrationStatus();
-  void isCalibrated();
-  void getSystemStatus();
+  /**
+   * @brief Retrieves the raw calibration level for each BNO055 sensor subsystem.
+   *
+   * Each field in RrBno055CalibData ranges from 0 (uncalibrated) to 3 (fully
+   * calibrated). This method is intended as a companion to is_fully_calibrated()
+   * — use is_fully_calibrated() for the binary pass/fail check, and this method
+   * when you need to know exactly where each sensor is in the calibration process.
+   *
+   * @param[out] data  Struct populated with raw calibration levels on success.
+   *                   Fields are zero-initialised — if false is returned, field
+   *                   values should not be trusted.
+   *
+   * @return true  if all four sensor status reads succeeded.
+   * @return false if any read failed at the hardware level. Inspect
+   *               get_system_status() for further diagnostic information.
+   */
+  bool get_calibration_status(RrBno055CalibData& data);
+
+  /**
+   * @brief Checks whether all BNO055 sensors are fully calibrated.
+   *
+   * Queries the calibration status of all four sensors — system, gyroscope,
+   * accelerometer, and magnetometer — and reports which, if any, are not yet
+   * fully calibrated.
+   *
+   * @param[out] calib_status A bitmask of type RrBno055CalibStatus indicating
+   * the calibration state of each sensor. The value is built using bitwise OR,
+   * meaning multiple sensors can be reported as uncalibrated simultaneously.
+   *
+   * Understanding the bitmask:
+   *
+   *   calib_status is initialised to FULLY_CALIBRATED (0x00) before any checks
+   *   are performed. For each sensor that fails its calibration check, its
+   *   corresponding flag bit is OR'd into calib_status. Because each flag
+   *   occupies a unique bit position, multiple failures combine without
+   *   collision:
+   *
+   *     FULLY_CALIBRATED     = 0x00  (0000 0000) — all sensors calibrated
+   *     SYS_NOT_CALIBRATED   = 0x01  (0000 0001)
+   *     GYRO_NOT_CALIBRATED  = 0x02  (0000 0010)
+   *     ACCEL_NOT_CALIBRATED = 0x04  (0000 0100)
+   *     MAG_NOT_CALIBRATED   = 0x08  (0000 1000)
+   *
+   *   Example: if gyro and mag are both uncalibrated, calib_status will be:
+   *     0x02 | 0x08 = 0x0A  (0000 1010)
+   *
+   *   To test for a specific failure in the caller:
+   *     if (calib_status & GYRO_NOT_CALIBRATED) { ... }
+   *
+   *   To test for complete calibration:
+   *     if (calib_status == FULLY_CALIBRATED) { ... }
+   *   or equivalently rely on the return value directly.
+   *
+   * A sensor is considered fully calibrated when its calibration level
+   * reaches 3 (the maximum reported by the BNO055). Both a read failure
+   * and a calibration level below 3 are treated as not calibrated, since
+   * in either case the sensor cannot be relied upon.
+   *
+   * @return true  if all four sensors report calibration level 3.
+   * @return false if any sensor is uncalibrated or its status could not
+   *               be read. Inspect calib_status for detail.
+   */
+  bool is_fully_calibrated(uint8_t& calib_status);
+
+  bool get_system_status(uint8_t& status, uint8_t& error);
 
 private:
+  bool check_bno_result(BNO055_RETURN_FUNCTION_TYPE rv, const char* context) const;
+
   std::shared_ptr<HardwareTransport> hw_;
 
   /**

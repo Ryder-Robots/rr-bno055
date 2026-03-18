@@ -34,31 +34,18 @@ namespace rr_bno055
 {
 
 /**
- * @brief Low-level I2C/UART transport adapter for the Bosch BNO055 IMU.
+ * @brief Sensor-agnostic I2C/UART transport adapter for Bosch IMU sensors.
  *
- * Implements the bus read/write function pointers required by the Bosch
- * BNO055 SensorAPI (`bno055_t::bus_read` / `bno055_t::bus_write`).
+ * Provides the bus read/write function pointers required by Bosch SensorAPI
+ * C libraries (e.g. `bno055_t::bus_read` / `bno055_t::bus_write`).  The
+ * transport carries no sensor-specific knowledge; all sensor validation
+ * (addresses, chip IDs, etc.) lives in the sensor device class.
  *
- * A single instance is tracked via `instance_` so that the static template
- * callbacks required by the C API can dispatch to the correct object.
+ * A single instance is tracked via `instance_` so that the static trampoline
+ * callbacks required by C APIs can dispatch to the correct object.
  *
- * ## Hardware connection (I2C, default)
- *
- * | BNO055 pin | Raspberry Pi pin       | Notes                          |
- * |------------|------------------------|--------------------------------|
- * | VCC        | 3.3 V  (pin 1)         | Do **not** use 5 V             |
- * | GND        | GND    (pin 6)         |                                |
- * | SDA        | GPIO 2 / SDA (pin 3)   |                                |
- * | SCL        | GPIO 3 / SCL (pin 5)   |                                |
- * | PS0        | GND                    | Protocol select: PS1=0, PS0=0 → I2C |
- * | PS1        | GND                    |                                |
- * | ADR / COM3 | GND (addr 0x28)        | Pull high for addr 0x29        |
- *
- * The default transport opens `/dev/i2c-1` at address `0x28`.
- * Enable I2C on the Pi with `sudo raspi-config` → Interface Options → I2C.
- *
- * Only one instance may exist at a time.  Copy and move are deleted to enforce this
- * constraint.  The class is not thread-safe.
+ * Only one instance may exist at a time.  Copy and move are deleted to
+ * enforce this constraint.
  */
 class HardwareTransport
 {
