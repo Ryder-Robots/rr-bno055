@@ -48,10 +48,32 @@ public:
   virtual ~TransportFactory() = default;
 
   /**
-   * @brief Opens the transport described by the stored config.
-   * @return Returns pointer to Hardware Transport.
+   * @brief Returns an initialised transport for the bus type in @p config,
+   * creating one if none is currently alive.
+   *
+   * The factory caches each transport as a `std::weak_ptr` keyed by
+   * `TransportType`.  If the cached instance is still alive (i.e. at least
+   * one `shared_ptr` to it exists elsewhere), it is returned directly.
+   * Otherwise a new instance is created, initialised, and cached.
+   *
+   * Thread-safe: guarded by an internal mutex.
+   *
+   * @param config  Bus configuration.  Only `config->type` and `config->device`
+   *                are used by the factory itself; the rest is forwarded to
+   *                the transport's `initialize()`.
+   * @return        Shared pointer to the initialised transport.
+   * @throws std::runtime_error if the transport cannot be opened.
    */
   std::shared_ptr<HardwareTransport> get_or_create_transport(std::shared_ptr<RrBNO055Config> config);
+
+  /**
+   * @brief Releases all cached weak_ptr references.
+   *
+   * Does not forcibly close any transport that is still held by a
+   * `shared_ptr` elsewhere — those will close when their last owner
+   * releases them.  Call this during orderly shutdown after
+   * `Bno055Device::deinitialize()`.
+   */
   void cleanup();
 
 private:

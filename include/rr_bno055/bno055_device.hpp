@@ -95,6 +95,19 @@ public:
   // this will be handled internally but sohuld it need to be handled externally it is availabl.
   bool set_power_mode(RrBnoPowerMode mode);
 
+  /**
+   * @brief Applies axis remapping and per-axis sign correction to the BNO055.
+   *
+   * Must be called while the device is in CONFIG mode
+   * (`RRBNO055_OPERATION_MODE_CONFIG`).  `initialize()` calls this
+   * automatically using the values from `RrBNO055Config`; call it again
+   * only if you need to change the mapping at runtime (switch back to
+   * CONFIG mode first, then restore your operating mode afterwards).
+   *
+   * @param remap  Axis permutation to apply (see `RrBno055AxisRemap`).
+   * @param sign   Per-axis output polarity (see `RrBno055AxisSignXYZ`).
+   * @return true on success, false if any Bosch API call fails.
+   */
   bool set_axis_remap(RrBno055AxisRemap remap, RrBno055AxisSignXYZ sign);
 
   // Data Reading:

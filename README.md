@@ -52,7 +52,7 @@ The library is structured in three layers, each with a single responsibility:
 Configuration follows the **Builder pattern**:
 
 - `TransportConfig::Builder` — bus type, device path, I2C address
-- `RrBNO055Config::Builder` — extends `TransportConfig::Builder` with axis remap and sign
+- `RrBNO055Config::Builder` — extends `TransportConfig::Builder` with axis remap and per-axis signs (`x_sign`, `y_sign`, `z_sign`)
 
 ---
 
@@ -153,7 +153,7 @@ Set `TransportType::UART` in `TransportConfig` and provide the correct device no
 
 using namespace rr_bno055;
 
-// 1. Build config (defaults: I2C, /dev/i2c-1, 0x28, axis remap X↔Y, sign negative)
+// 1. Build config (defaults: I2C, /dev/i2c-1, 0x28, remap X↔Y, x=neg y=pos z=neg)
 RrBNO055Config::Builder b{};
 auto conf = std::make_shared<RrBNO055Config>(b.build());
 
@@ -210,11 +210,11 @@ All methods return `bool` (true = success) unless noted otherwise.
 
 #### Configuration
 
-| Method                        | Description                                              |
-| ----------------------------- | -------------------------------------------------------- |
-| `set_op_mode(mode)`           | Set operating mode (see `RrBno055OpMode`). Verifies readback. |
-| `set_power_mode(mode)`        | Set power mode (see `RrBnoPowerMode`).                   |
-| `set_axis_remap(remap, sign)` | Remap physical axes to match mounting orientation.       |
+| Method                        | Description                                                                                           |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `set_op_mode(mode)`           | Set operating mode (see `RrBno055OpMode`). Verifies readback.                                         |
+| `set_power_mode(mode)`        | Set power mode (see `RrBnoPowerMode`).                                                                |
+| `set_axis_remap(remap, sign)` | Remap physical axes and set per-axis signs (`RrBno055AxisSignXYZ`) to match mounting orientation. Must be called in CONFIG mode. |
 
 #### Data Reading
 
@@ -301,13 +301,18 @@ sudo ./build/imu_orientation_check --no-wait --rate 20
 
 ### Options
 
-| Option           | Default      | Description                                               |
-| ---------------- | ------------ | --------------------------------------------------------- |
-| `--device PATH`  | `/dev/i2c-1` | I2C or UART device node                                   |
-| `--address ADDR` | `0x28`       | I2C address in hex (`0x28` or `0x29`)                     |
-| `--uart`         | off          | Use UART transport; sets default device to `/dev/ttyAMA0` |
-| `--no-wait`      | off          | Skip calibration wait; start reading immediately          |
-| `--rate HZ`      | `10`         | Refresh rate in Hz (1–50)                                 |
+| Option              | Default      | Description                                               |
+| ------------------- | ------------ | --------------------------------------------------------- |
+| `--device PATH`     | `/dev/i2c-1` | I2C or UART device node                                   |
+| `--address ADDR`    | `0x28`       | I2C address in hex (`0x28` or `0x29`)                     |
+| `--uart`            | off          | Use UART transport; sets default device to `/dev/ttyAMA0` |
+| `--no-wait`         | off          | Skip calibration wait; start reading immediately          |
+| `--rate HZ`         | `10`         | Refresh rate in Hz (1–50)                                 |
+| `--csv`             | off          | Enable CSV logging (requires `--output`)                  |
+| `--output PATH`     | —            | File path for CSV output                                  |
+| `--sign-x pos\|neg` | `neg`        | Override X-axis sign                                      |
+| `--sign-y pos\|neg` | `pos`        | Override Y-axis sign                                      |
+| `--sign-z pos\|neg` | `neg`        | Override Z-axis sign                                      |
 
 ### What it displays
 
