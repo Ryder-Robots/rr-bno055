@@ -18,7 +18,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 project(rr_bno055
-  VERSION 0.0.0
+  VERSION 0.0.1
   DESCRIPTION "Ryder Robots BNO055 IMU hardware driver"
   LANGUAGES C CXX
 )
@@ -45,7 +45,7 @@ FetchContent_Populate(bno055_sensorapi)
 set(BNO055_API_DIR ${bno055_sensorapi_SOURCE_DIR})
 
 # ─── Library target ──────────────────────────────────────────────────────────
-add_library(rr_bno055
+add_library(rr_bno055 SHARED 
   src/bno055_device.cpp
   src/hardware_transport.cpp
   src/i2c_hardware_transport.cpp
@@ -60,6 +60,11 @@ target_include_directories(rr_bno055
     $<BUILD_INTERFACE:${BNO055_API_DIR}>
     $<INSTALL_INTERFACE:include>
     $<INSTALL_INTERFACE:include/bno055_sensorapi>
+)
+
+set_target_properties(rr_bno055 PROPERTIES
+  SOVERSION ${PROJECT_VERSION_MAJOR}
+  VERSION   ${PROJECT_VERSION}
 )
 
 target_compile_options(rr_bno055 PRIVATE
@@ -178,7 +183,7 @@ set(CPACK_PACKAGE_CONTACT "Ryder Robots <aaron@ryderrobots.com>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
 set(CPACK_DEBIAN_PACKAGE_SECTION "libs")
 set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6, libstdc++6")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 
 # Debian dev package (headers + cmake config)
