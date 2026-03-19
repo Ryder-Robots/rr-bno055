@@ -15,10 +15,11 @@ The library is focused on the BNO055 and uses the [Bosch BNO055 SensorAPI](https
 5. [API Reference](#api-reference)
 6. [Calibration Workflow](#calibration-workflow)
 7. [Orientation Check Tool](#orientation-check-tool)
-8. [Testing](#testing)
-9. [Contributing](#contributing)
-10. [References](#references)
-11. [Third-Party Libraries](#third-party-libraries)
+8. [Validated Axis Configuration](#validated-axis-configuration)
+9. [Testing](#testing)
+10. [Contributing](#contributing)
+11. [References](#references)
+12. [Third-Party Libraries](#third-party-libraries)
 
 ---
 
@@ -353,6 +354,30 @@ With the sensor lying flat, label-side up, in its intended mounting orientation:
    behaviour matches the physical mounting.
 
 Press **Ctrl+C** at any time to exit cleanly.
+
+---
+
+## Validated Axis Configuration
+
+The default axis remap and sign values in `RrBno055AxisSignXYZ` have been
+validated on the mazebot platform (inverted mounting orientation) using
+`imu_orientation_check` with CSV logging.
+
+See [doc/IMU_AXIS_REMAP_VALIDATION.md](doc/IMU_AXIS_REMAP_VALIDATION.md) for
+the full test procedure, results, and raw CSV data.
+
+**Validated defaults:**
+
+| Field         | Value                          |
+| ------------- | ------------------------------ |
+| `axis_remap`  | `RRBNO055_REMAP_X_Y` (0x21)    |
+| `x_sign`      | `RRBNO055_REMAP_AXIS_NEGATIVE` |
+| `y_sign`      | `RRBNO055_REMAP_AXIS_POSITIVE` |
+| `z_sign`      | `RRBNO055_REMAP_AXIS_NEGATIVE` |
+
+If you mount the sensor in a different orientation, use
+`imu_orientation_check --sign-x/y/z` to find the correct combination, then
+override via `RrBNO055Config::Builder::with_axis_sign_xyz()`.
 
 ---
 
