@@ -80,7 +80,7 @@ bool Bno055Device::initialize(std::shared_ptr<RrBNO055Config> conf, std::shared_
   // set orientation.
   if (set_op_mode(RRBNO055_OPERATION_MODE_CONFIG))
   {
-    if (!set_axis_remap(conf->axis_remap, conf->axis_sign))
+    if (!set_axis_remap(conf->axis_remap, conf->axis_sign_xyz))
     {
       std::cerr << "[Bno055Device] could not set intended orientation\n";
       hw_ = nullptr;
@@ -102,7 +102,6 @@ void Bno055Device::deinitialize()
   if (hw_ && hw_->is_initilized())
   {
     // Attempt to set low power mode; continue deinitialization if this fails.
-    // TODO: use set_power_mode
     if (!set_power_mode(RrBnoPowerMode::RRBNO055_POWER_MODE_LOWPOWER))
     {
       std::cerr << "[Bno055Device] unable to set device to low power mode\n";
@@ -195,16 +194,26 @@ bool Bno055Device::reset()
  *      0X09     | BNO055_REMAP_X_Y_Z_TYPE1 | X=Y;Y=Z;Z=X
  *      0X24     | BNO055_DEFAULT_AXIS      | X=X;Y=Y;Z=Z
  */
-bool Bno055Device::set_axis_remap(RrBno055AxisRemap remap, RrBno055AxisSign sign)
+bool Bno055Device::set_axis_remap(RrBno055AxisRemap remap, RrBno055AxisSignXYZ sign)
 {
   if (bno055_set_axis_remap_value(remap) != BNO055_SUCCESS)
   {
     std::cerr << "[Bno055Device] set_axis_remap: failed to set remap value\n";
     return false;
   }
-  if (bno055_set_remap_z_sign(sign) != BNO055_SUCCESS)
+  if (bno055_set_remap_x_sign(sign.x_sign) != BNO055_SUCCESS)
   {
-    std::cerr << "[Bno055Device] set_axis_remap: failed to set remap sign\n";
+    std::cerr << "[Bno055Device] set_axis_remap on x: failed to set remap sign\n";
+    return false;
+  }
+  if (bno055_set_remap_y_sign(sign.y_sign) != BNO055_SUCCESS)
+  {
+    std::cerr << "[Bno055Device] set_axis_remap on y: failed to set remap sign\n";
+    return false;
+  }
+  if (bno055_set_remap_z_sign(sign.z_sign) != BNO055_SUCCESS)
+  {
+    std::cerr << "[Bno055Device] set_axis_remap on z: failed to set remap sign\n";
     return false;
   }
   return true;
@@ -284,10 +293,14 @@ bool Bno055Device::is_fully_calibrated(uint8_t& calib_status)
   // Delegate reads to get_calibration_status to avoid duplicate I2C transactions.
   // Treat read failures as uncalibrated — sensor data cannot be trusted either way.
   bool ok = get_calibration_status(data);
-  if (!ok || data.sys < 3)   calib_status |= RrBno055CalibStatus::SYS_NOT_CALIBRATED;
-  if (!ok || data.gyro < 3)  calib_status |= RrBno055CalibStatus::GYRO_NOT_CALIBRATED;
-  if (!ok || data.accel < 3) calib_status |= RrBno055CalibStatus::ACCEL_NOT_CALIBRATED;
-  if (!ok || data.mag < 3)   calib_status |= RrBno055CalibStatus::MAG_NOT_CALIBRATED;
+  if (!ok || data.sys < 3)
+    calib_status |= RrBno055CalibStatus::SYS_NOT_CALIBRATED;
+  if (!ok || data.gyro < 3)
+    calib_status |= RrBno055CalibStatus::GYRO_NOT_CALIBRATED;
+  if (!ok || data.accel < 3)
+    calib_status |= RrBno055CalibStatus::ACCEL_NOT_CALIBRATED;
+  if (!ok || data.mag < 3)
+    calib_status |= RrBno055CalibStatus::MAG_NOT_CALIBRATED;
 
   return calib_status == RrBno055CalibStatus::FULLY_CALIBRATED;
 }

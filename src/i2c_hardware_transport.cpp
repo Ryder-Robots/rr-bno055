@@ -44,7 +44,6 @@ int I2CHardwareTransport::initialize_trans(std::shared_ptr<TransportConfig> tran
 
 int8_t I2CHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
 {
-  (void)dev_addr;
   if (!is_initialized_.load(std::memory_order_acquire))
   {
     return -1;
@@ -52,13 +51,14 @@ int8_t I2CHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_
 
   struct i2c_msg msgs[2];
 
-  msgs[0].addr = reg_addr;
+  // Message 1: write the register address to read from.
+  msgs[0].addr = dev_addr;
   msgs[0].flags = 0;  // write
   msgs[0].len = 1;
   msgs[0].buf = &reg_addr;
 
-  // Message 2: read the response (repeated START, not a new START)
-  msgs[1].addr = reg_addr;
+  // Message 2: read the response (repeated START, not a new START).
+  msgs[1].addr = dev_addr;
   msgs[1].flags = I2C_M_RD;  // read
   msgs[1].len = len;
   msgs[1].buf = data;
@@ -75,8 +75,6 @@ int8_t I2CHardwareTransport::bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_
 
 int8_t I2CHardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t* data, uint8_t len)
 {
-  (void)dev_addr;
-
   if (!is_initialized_.load(std::memory_order_acquire))
   {
     return -1;
@@ -88,7 +86,7 @@ int8_t I2CHardwareTransport::bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8
   std::memcpy(&buf[1], data, len);
 
   struct i2c_msg msg;
-  msg.addr = reg_addr;
+  msg.addr = dev_addr;
   msg.flags = 0;  // write
   msg.len = len + 1;
   msg.buf = buf;

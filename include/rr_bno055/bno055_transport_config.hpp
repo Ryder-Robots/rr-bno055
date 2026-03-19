@@ -40,11 +40,19 @@ enum RrBno055AxisSign : uint8_t
   RRBNO055_REMAP_AXIS_POSITIVE = BNO055_REMAP_AXIS_POSITIVE,
   RRBNO055_REMAP_AXIS_NEGATIVE = BNO055_REMAP_AXIS_NEGATIVE,
 };
+
+struct RrBno055AxisSignXYZ
+{
+  RrBno055AxisSign x_sign = RRBNO055_REMAP_AXIS_NEGATIVE;
+  RrBno055AxisSign y_sign = RRBNO055_REMAP_AXIS_POSITIVE;
+  RrBno055AxisSign z_sign = RRBNO055_REMAP_AXIS_NEGATIVE;
+};
+
 class RrBNO055Config : public TransportConfig
 {
 public:
   const RrBno055AxisRemap axis_remap;
-  const RrBno055AxisSign axis_sign;
+  const RrBno055AxisSignXYZ axis_sign_xyz;
 
   class Builder : public TransportConfig::Builder
   {
@@ -54,28 +62,28 @@ public:
       axis_remap_ = axis_remap;
       return *this;
     }
-    Builder& with_axis_sign(RrBno055AxisSign axis_sign)
+    Builder& with_axis_sign_xyz(RrBno055AxisSignXYZ axis_sign_xyz)
     {
-      axis_sign_ = axis_sign;
+      axis_sign_xyz_ = axis_sign_xyz;
       return *this;
     }
 
     RrBNO055Config build() const
     {
-      return RrBNO055Config(type_, device_, address_, axis_remap_, axis_sign_);
+      return RrBNO055Config(type_, device_, address_, axis_remap_, axis_sign_xyz_);
     }
 
   private:
     RrBno055AxisRemap axis_remap_ = RRBNO055_REMAP_X_Y;
-    RrBno055AxisSign axis_sign_ = RRBNO055_REMAP_AXIS_NEGATIVE;
+    RrBno055AxisSignXYZ axis_sign_xyz_;
   };
 
 private:
   RrBNO055Config(TransportType type, std::string device, uint8_t address, RrBno055AxisRemap remap,
-                 RrBno055AxisSign sign)
+                 RrBno055AxisSignXYZ axis_sign_xyz_in)
     : TransportConfig(type, std::move(device), address)
     , axis_remap(remap)  // parameter named remap, member named axis_remap
-    , axis_sign(sign)
+    , axis_sign_xyz(axis_sign_xyz_in)
   {
   }
 };

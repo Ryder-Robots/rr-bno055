@@ -199,6 +199,58 @@ TEST(Bno055DeviceTest, ResetAfterInitializeExecutesWithoutCrash)
   EXPECT_NO_THROW(dev.reset());
 }
 
+// ── set_axis_remap ────────────────────────────────────────────────────────────
+//
+// After initialize(), the device is in CONFIG mode (readback 0x00 matches).
+// set_axis_remap calls bno055_set_axis_remap_value, bno055_set_remap_x_sign,
+// bno055_set_remap_y_sign, and bno055_set_remap_z_sign.  All bus_write calls
+// return 0 (BNO055_SUCCESS) with the mock, so the call succeeds.
+
+TEST(Bno055DeviceTest, SetAxisRemapDefaultSignsSucceeds)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  // Default signs: x=NEGATIVE, y=POSITIVE, z=NEGATIVE
+  RrBno055AxisSignXYZ sign;
+  EXPECT_TRUE(dev.set_axis_remap(RRBNO055_REMAP_X_Y, sign));
+}
+
+TEST(Bno055DeviceTest, SetAxisRemapAllPositiveSignsSucceeds)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  RrBno055AxisSignXYZ sign{ RRBNO055_REMAP_AXIS_POSITIVE,
+                             RRBNO055_REMAP_AXIS_POSITIVE,
+                             RRBNO055_REMAP_AXIS_POSITIVE };
+  EXPECT_TRUE(dev.set_axis_remap(RRBNO055_DEFAULT_AXIS, sign));
+}
+
+TEST(Bno055DeviceTest, SetAxisRemapMixedSignsSucceeds)
+{
+  Bno055Device dev;
+  ASSERT_TRUE(dev.initialize(valid_cfg(), initialized_hw()));
+  RrBno055AxisSignXYZ sign{ RRBNO055_REMAP_AXIS_NEGATIVE,
+                             RRBNO055_REMAP_AXIS_POSITIVE,
+                             RRBNO055_REMAP_AXIS_NEGATIVE };
+  EXPECT_TRUE(dev.set_axis_remap(RRBNO055_REMAP_Y_Z, sign));
+}
+
+TEST(Bno055DeviceTest, InitializeWithCustomAxisSignXyzSucceeds)
+{
+  // Verify that a config with non-default per-axis signs passes through
+  // initialize() without error.
+  RrBNO055Config::Builder b{};
+  b.with_device("/dev/i2c-1");
+  b.with_address(0x28);
+  b.with_axis_sign_xyz({ RRBNO055_REMAP_AXIS_POSITIVE,
+                         RRBNO055_REMAP_AXIS_NEGATIVE,
+                         RRBNO055_REMAP_AXIS_POSITIVE });
+  auto cfg = std::make_shared<RrBNO055Config>(b.build());
+
+  Bno055Device dev;
+  EXPECT_TRUE(dev.initialize(cfg, initialized_hw()));
+}
+
 // ── read_quaternion ────────────────────────────────────────────────────────────
 //
 // With the mock (bus_read returns 0x00), bno055_read_quaternion_wxyz succeeds

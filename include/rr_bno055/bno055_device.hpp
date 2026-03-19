@@ -95,7 +95,7 @@ public:
   // this will be handled internally but sohuld it need to be handled externally it is availabl.
   bool set_power_mode(RrBnoPowerMode mode);
 
-  bool set_axis_remap(RrBno055AxisRemap remap, RrBno055AxisSign sign);
+  bool set_axis_remap(RrBno055AxisRemap remap, RrBno055AxisSignXYZ sign);
 
   // Data Reading:
 

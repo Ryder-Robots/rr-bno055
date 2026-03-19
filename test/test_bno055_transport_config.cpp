@@ -31,10 +31,12 @@ TEST(RrBNO055ConfigTest, DefaultAxisRemapIsXY)
   EXPECT_EQ(cfg.axis_remap, RRBNO055_REMAP_X_Y);
 }
 
-TEST(RrBNO055ConfigTest, DefaultAxisSignIsNegative)
+TEST(RrBNO055ConfigTest, DefaultAxisSignXyzHasCorrectDefaults)
 {
   auto cfg = RrBNO055Config::Builder{}.build();
-  EXPECT_EQ(cfg.axis_sign, RRBNO055_REMAP_AXIS_NEGATIVE);
+  EXPECT_EQ(cfg.axis_sign_xyz.x_sign, RRBNO055_REMAP_AXIS_NEGATIVE);
+  EXPECT_EQ(cfg.axis_sign_xyz.y_sign, RRBNO055_REMAP_AXIS_POSITIVE);
+  EXPECT_EQ(cfg.axis_sign_xyz.z_sign, RRBNO055_REMAP_AXIS_NEGATIVE);
 }
 
 TEST(RrBNO055ConfigTest, InheritsDefaultTransportFields)
@@ -53,10 +55,15 @@ TEST(RrBNO055ConfigTest, CustomAxisRemapIsStored)
   EXPECT_EQ(cfg.axis_remap, RRBNO055_DEFAULT_AXIS);
 }
 
-TEST(RrBNO055ConfigTest, CustomAxisSignIsStored)
+TEST(RrBNO055ConfigTest, CustomAxisSignXyzIsStored)
 {
-  auto cfg = RrBNO055Config::Builder{}.with_axis_sign(RRBNO055_REMAP_AXIS_POSITIVE).build();
-  EXPECT_EQ(cfg.axis_sign, RRBNO055_REMAP_AXIS_POSITIVE);
+  RrBno055AxisSignXYZ sign{ RRBNO055_REMAP_AXIS_POSITIVE,
+                             RRBNO055_REMAP_AXIS_NEGATIVE,
+                             RRBNO055_REMAP_AXIS_POSITIVE };
+  auto cfg = RrBNO055Config::Builder{}.with_axis_sign_xyz(sign).build();
+  EXPECT_EQ(cfg.axis_sign_xyz.x_sign, RRBNO055_REMAP_AXIS_POSITIVE);
+  EXPECT_EQ(cfg.axis_sign_xyz.y_sign, RRBNO055_REMAP_AXIS_NEGATIVE);
+  EXPECT_EQ(cfg.axis_sign_xyz.z_sign, RRBNO055_REMAP_AXIS_POSITIVE);
 }
 
 TEST(RrBNO055ConfigTest, AllCustomFieldsStoredTogether)
@@ -68,12 +75,16 @@ TEST(RrBNO055ConfigTest, AllCustomFieldsStoredTogether)
   b.with_device("/dev/ttyAMA0");
   b.with_address(0x29);
   b.with_axis_remap(RRBNO055_REMAP_Y_Z);
-  b.with_axis_sign(RRBNO055_REMAP_AXIS_POSITIVE);
+  b.with_axis_sign_xyz({ RRBNO055_REMAP_AXIS_POSITIVE,
+                         RRBNO055_REMAP_AXIS_NEGATIVE,
+                         RRBNO055_REMAP_AXIS_POSITIVE });
   auto cfg = b.build();
 
   EXPECT_EQ(cfg.type, UART);
   EXPECT_EQ(cfg.device, "/dev/ttyAMA0");
   EXPECT_EQ(cfg.address, 0x29);
   EXPECT_EQ(cfg.axis_remap, RRBNO055_REMAP_Y_Z);
-  EXPECT_EQ(cfg.axis_sign, RRBNO055_REMAP_AXIS_POSITIVE);
+  EXPECT_EQ(cfg.axis_sign_xyz.x_sign, RRBNO055_REMAP_AXIS_POSITIVE);
+  EXPECT_EQ(cfg.axis_sign_xyz.y_sign, RRBNO055_REMAP_AXIS_NEGATIVE);
+  EXPECT_EQ(cfg.axis_sign_xyz.z_sign, RRBNO055_REMAP_AXIS_POSITIVE);
 }
