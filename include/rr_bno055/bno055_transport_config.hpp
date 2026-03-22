@@ -20,7 +20,9 @@
 
 #pragma once
 
+extern "C" {
 #include "bno055.h"
+}
 #include "rr_bno055/transport_config.hpp"
 
 namespace rr_bno055

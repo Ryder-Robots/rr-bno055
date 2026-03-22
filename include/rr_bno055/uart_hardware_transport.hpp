@@ -26,7 +26,9 @@
 #include <unistd.h>
 #include <termios.h>
 #include <vector>
+extern "C" {
 #include "bno055.h"
+}
 #include "rr_bno055/hardware_transport.hpp"
 
 namespace rr_bno055

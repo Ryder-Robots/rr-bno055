@@ -18,7 +18,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 project(rr_bno055
-  VERSION 0.0.1
+  VERSION 0.0.2
   DESCRIPTION "Ryder Robots BNO055 IMU hardware driver"
   LANGUAGES C CXX
 )
@@ -45,7 +45,7 @@ FetchContent_Populate(bno055_sensorapi)
 set(BNO055_API_DIR ${bno055_sensorapi_SOURCE_DIR})
 
 # ─── Library target ──────────────────────────────────────────────────────────
-add_library(rr_bno055 SHARED 
+add_library(rr_bno055 SHARED
   src/bno055_device.cpp
   src/hardware_transport.cpp
   src/i2c_hardware_transport.cpp
@@ -59,7 +59,6 @@ target_include_directories(rr_bno055
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${BNO055_API_DIR}>
     $<INSTALL_INTERFACE:include>
-    $<INSTALL_INTERFACE:include/bno055_sensorapi>
 )
 
 set_target_properties(rr_bno055 PROPERTIES
@@ -87,10 +86,12 @@ install(DIRECTORY include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Install Bosch headers alongside rr_bno055 headers
+# Install Bosch header into rr_bno055 namespace so downstream consumers
+# find it transitively as rr_bno055/bno055.h without needing to know
+# about FetchContent or the SensorAPI source location.
 install(FILES
   ${BNO055_API_DIR}/bno055.h
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/bno055_sensorapi
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rr_bno055
 )
 
 # Install Bosch LICENSE for legal compliance
